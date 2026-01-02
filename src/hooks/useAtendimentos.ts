@@ -52,48 +52,51 @@ export function useAtendimentos() {
   });
 }
 
-export function useClosers() {
+export function useClosers(includeInactive = false) {
   return useQuery({
-    queryKey: ["closers"],
+    queryKey: ["closers", includeInactive],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("closers")
-        .select("*")
-        .eq("ativo", true)
-        .order("nome");
+      let query = supabase.from("closers").select("*").order("nome");
+      
+      if (!includeInactive) {
+        query = query.eq("ativo", true);
+      }
 
+      const { data, error } = await query;
       if (error) throw error;
       return data || [];
     },
   });
 }
 
-export function useSdrs() {
+export function useSdrs(includeInactive = false) {
   return useQuery({
-    queryKey: ["sdrs"],
+    queryKey: ["sdrs", includeInactive],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("sdrs")
-        .select("*")
-        .eq("ativo", true)
-        .order("nome");
+      let query = supabase.from("sdrs").select("*").order("nome");
+      
+      if (!includeInactive) {
+        query = query.eq("ativo", true);
+      }
 
+      const { data, error } = await query;
       if (error) throw error;
       return data || [];
     },
   });
 }
 
-export function useOrigens() {
+export function useOrigens(includeInactive = false) {
   return useQuery({
-    queryKey: ["origens"],
+    queryKey: ["origens", includeInactive],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("origens")
-        .select("*")
-        .eq("ativo", true)
-        .order("nome");
+      let query = supabase.from("origens").select("*").order("nome");
+      
+      if (!includeInactive) {
+        query = query.eq("ativo", true);
+      }
 
+      const { data, error } = await query;
       if (error) throw error;
       return data || [];
     },
