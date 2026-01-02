@@ -4,7 +4,10 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Plus, UserCheck, UserX } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Label } from "@/components/ui/label";
+import { Plus, UserCheck, UserX, Pencil, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -17,6 +20,9 @@ export function GestaoClosers({ closers }: GestaoClosersProps) {
   const queryClient = useQueryClient();
   const [novoCloser, setNovoCloser] = useState("");
   const [isAdding, setIsAdding] = useState(false);
+  const [editingCloser, setEditingCloser] = useState<{ id: string; nome: string } | null>(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleAddCloser = async () => {
     if (!novoCloser.trim()) {
@@ -55,6 +61,61 @@ export function GestaoClosers({ closers }: GestaoClosersProps) {
       queryClient.invalidateQueries({ queryKey: ["closers"] });
     } catch (error) {
       toast.error("Erro ao atualizar closer");
+    }
+  };
+
+  const handleEdit = (closer: { id: string; nome: string }) => {
+    setEditingCloser({ ...closer });
+    setIsEditDialogOpen(true);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingCloser || !editingCloser.nome.trim()) {
+      toast.error("Digite o nome do closer");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const { error } = await supabase
+        .from("closers")
+        .update({ nome: editingCloser.nome.trim() })
+        .eq("id", editingCloser.id);
+
+      if (error) throw error;
+
+      toast.success("Closer atualizado com sucesso!");
+      queryClient.invalidateQueries({ queryKey: ["closers"] });
+      setIsEditDialogOpen(false);
+      setEditingCloser(null);
+    } catch (error: any) {
+      if (error.code === "23505") {
+        toast.error("Este nome já existe");
+      } else {
+        toast.error("Erro ao atualizar closer");
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from("closers")
+        .delete()
+        .eq("id", id);
+
+      if (error) throw error;
+
+      toast.success("Closer excluído com sucesso!");
+      queryClient.invalidateQueries({ queryKey: ["closers"] });
+    } catch (error: any) {
+      if (error.code === "23503") {
+        toast.error("Este closer possui registros vinculados e não pode ser excluído");
+      } else {
+        toast.error("Erro ao excluir closer");
+      }
     }
   };
 
@@ -110,18 +171,52 @@ export function GestaoClosers({ closers }: GestaoClosersProps) {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => toggleAtivo(closer.id, closer.ativo)}
-                        className="hover:bg-secondary"
-                      >
-                        {closer.ativo ? (
-                          <UserX className="h-4 w-4 text-destructive" />
-                        ) : (
-                          <UserCheck className="h-4 w-4 text-success" />
-                        )}
-                      </Button>
+                      <div className="flex justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleEdit(closer)}
+                          className="hover:bg-secondary"
+                        >
+                          <Pencil className="h-4 w-4 text-muted-foreground" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => toggleAtivo(closer.id, closer.ativo)}
+                          className="hover:bg-secondary"
+                        >
+                          {closer.ativo ? (
+                            <UserX className="h-4 w-4 text-destructive" />
+                          ) : (
+                            <UserCheck className="h-4 w-4 text-success" />
+                          )}
+                        </Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="ghost" size="sm" className="hover:bg-secondary">
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent className="bg-card border-border">
+                            <AlertDialogHeader>
+                              <AlertDialogTitle className="text-foreground">Confirmar exclusão</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Tem certeza que deseja excluir o closer "{closer.nome}"? Esta ação não pode ser desfeita.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel className="border-border">Cancelar</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => handleDelete(closer.id)}
+                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                              >
+                                Excluir
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))
@@ -130,6 +225,35 @@ export function GestaoClosers({ closers }: GestaoClosersProps) {
           </Table>
         </div>
       </CardContent>
+
+      {/* Dialog de Edição */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="bg-card border-border">
+          <DialogHeader>
+            <DialogTitle className="text-foreground">Editar Closer</DialogTitle>
+          </DialogHeader>
+          {editingCloser && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label className="text-foreground">Nome</Label>
+                <Input
+                  value={editingCloser.nome}
+                  onChange={(e) => setEditingCloser({ ...editingCloser, nome: e.target.value })}
+                  className="bg-secondary border-border"
+                />
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)} className="border-border">
+              Cancelar
+            </Button>
+            <Button onClick={handleSaveEdit} disabled={isSubmitting} className="bg-primary text-primary-foreground">
+              {isSubmitting ? "Salvando..." : "Salvar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }
