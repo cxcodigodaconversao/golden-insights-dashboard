@@ -71,20 +71,31 @@ export type Database = {
           created_at: string
           id: string
           nome: string
+          time_id: string | null
         }
         Insert: {
           ativo?: boolean
           created_at?: string
           id?: string
           nome: string
+          time_id?: string | null
         }
         Update: {
           ativo?: boolean
           created_at?: string
           id?: string
           nome?: string
+          time_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "closers_time_id_fkey"
+            columns: ["time_id"]
+            isOneToOne: false
+            referencedRelation: "times"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       lancamentos_disparo: {
         Row: {
@@ -239,6 +250,38 @@ export type Database = {
           },
         ]
       }
+      lideres_comerciais: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          id: string
+          nome: string
+          time_id: string | null
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          id?: string
+          nome: string
+          time_id?: string | null
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          id?: string
+          nome?: string
+          time_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lideres_comerciais_time_id_fkey"
+            columns: ["time_id"]
+            isOneToOne: false
+            referencedRelation: "times"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       origens: {
         Row: {
           ativo: boolean
@@ -266,15 +309,50 @@ export type Database = {
           created_at: string
           id: string
           nome: string
+          time_id: string | null
         }
         Insert: {
           ativo?: boolean
           created_at?: string
           id?: string
           nome: string
+          time_id?: string | null
         }
         Update: {
           ativo?: boolean
+          created_at?: string
+          id?: string
+          nome?: string
+          time_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sdrs_time_id_fkey"
+            columns: ["time_id"]
+            isOneToOne: false
+            referencedRelation: "times"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      times: {
+        Row: {
+          ativo: boolean
+          cor: string | null
+          created_at: string
+          id: string
+          nome: string
+        }
+        Insert: {
+          ativo?: boolean
+          cor?: string | null
+          created_at?: string
+          id?: string
+          nome: string
+        }
+        Update: {
+          ativo?: boolean
+          cor?: string | null
           created_at?: string
           id?: string
           nome?: string

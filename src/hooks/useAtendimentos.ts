@@ -103,6 +103,40 @@ export function useOrigens(includeInactive = false) {
   });
 }
 
+export function useTimes(includeInactive = false) {
+  return useQuery({
+    queryKey: ["times", includeInactive],
+    queryFn: async () => {
+      let query = supabase.from("times").select("*").order("nome");
+      
+      if (!includeInactive) {
+        query = query.eq("ativo", true);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+      return data || [];
+    },
+  });
+}
+
+export function useLideres(includeInactive = false) {
+  return useQuery({
+    queryKey: ["lideres", includeInactive],
+    queryFn: async () => {
+      let query = supabase.from("lideres_comerciais").select("*").order("nome");
+      
+      if (!includeInactive) {
+        query = query.eq("ativo", true);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+      return data || [];
+    },
+  });
+}
+
 // Métricas calculadas
 export const calcularMetricas = (data: Atendimento[], startDate: Date, endDate: Date) => {
   const filtered = data.filter((a) => a.dataCall >= startDate && a.dataCall <= endDate);

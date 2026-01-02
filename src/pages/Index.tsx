@@ -6,15 +6,17 @@ import { AtendimentoForm } from "@/components/Dashboard/AtendimentoForm";
 import { GestaoClosers } from "@/components/Dashboard/GestaoClosers";
 import { GestaoSDRs } from "@/components/Dashboard/GestaoSDRs";
 import { GestaoOrigens } from "@/components/Dashboard/GestaoOrigens";
+import { GestaoTimes } from "@/components/Dashboard/GestaoTimes";
+import { GestaoLideres } from "@/components/Dashboard/GestaoLideres";
 import { LancamentoSDRPage } from "@/components/Dashboard/LancamentoSDRPage";
 import { LancamentoDisparoPage } from "@/components/Dashboard/LancamentoDisparoPage";
 import { LancamentoTrafegoPage } from "@/components/Dashboard/LancamentoTrafegoPage";
 import { ResumoSemanal } from "@/components/Dashboard/ResumoSemanal";
 import { ImportExcel } from "@/components/Dashboard/ImportExcel";
 import { ExportExcel } from "@/components/Dashboard/ExportExcel";
-import { useAtendimentos, useClosers, useSdrs, useOrigens } from "@/hooks/useAtendimentos";
+import { useAtendimentos, useClosers, useSdrs, useOrigens, useTimes, useLideres } from "@/hooks/useAtendimentos";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { LayoutDashboard, PlusCircle, Users, Headphones, Globe, FileSpreadsheet, Zap, TrendingUp, Calendar } from "lucide-react";
+import { LayoutDashboard, PlusCircle, Users, Headphones, Globe, FileSpreadsheet, Zap, TrendingUp, Calendar, Shield, Crown } from "lucide-react";
 import { startOfMonth, endOfMonth, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -30,10 +32,14 @@ const Index = () => {
   const { data: closersData = [], isLoading: isLoadingClosers } = useClosers();
   const { data: sdrsData = [], isLoading: isLoadingSdrs } = useSdrs();
   const { data: origensData = [], isLoading: isLoadingOrigens } = useOrigens();
+  const { data: timesData = [], isLoading: isLoadingTimes } = useTimes();
+  const { data: lideresData = [], isLoading: isLoadingLideres } = useLideres();
   
   const { data: allClosers = [] } = useClosers(true);
   const { data: allSdrs = [] } = useSdrs(true);
   const { data: allOrigens = [] } = useOrigens(true);
+  const { data: allTimes = [] } = useTimes(true);
+  const { data: allLideres = [] } = useLideres(true);
 
   const closersList = useMemo(() => closersData.map(c => c.nome), [closersData]);
   const sdrsList = useMemo(() => sdrsData.map(s => s.nome), [sdrsData]);
@@ -43,7 +49,7 @@ const Index = () => {
     setPeriodType(type);
   };
 
-  const isLoading = isLoadingAtendimentos || isLoadingClosers || isLoadingSdrs || isLoadingOrigens;
+  const isLoading = isLoadingAtendimentos || isLoadingClosers || isLoadingSdrs || isLoadingOrigens || isLoadingTimes || isLoadingLideres;
 
   return (
     <div className="min-h-screen bg-background">
@@ -77,6 +83,14 @@ const Index = () => {
                 <TrendingUp className="h-4 w-4" />
                 Tráfego
               </TabsTrigger>
+              <TabsTrigger value="times" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2">
+                <Shield className="h-4 w-4" />
+                Times
+              </TabsTrigger>
+              <TabsTrigger value="lideres" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2">
+                <Crown className="h-4 w-4" />
+                Líderes
+              </TabsTrigger>
               <TabsTrigger value="closers" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2">
                 <Users className="h-4 w-4" />
                 Closers
@@ -107,7 +121,15 @@ const Index = () => {
               </div>
               <PeriodFilter onPeriodChange={handlePeriodChange} currentPeriod={periodType} />
             </div>
-            <DashboardContent atendimentos={atendimentos} closersList={closersList} sdrsList={sdrsList} dateRange={dateRange} isLoading={isLoading} />
+            <DashboardContent 
+              atendimentos={atendimentos} 
+              closersList={closersList} 
+              sdrsList={sdrsList} 
+              dateRange={dateRange} 
+              isLoading={isLoading}
+              times={timesData}
+              closers={allClosers}
+            />
           </TabsContent>
 
           <TabsContent value="resumo" className="space-y-6">
@@ -150,12 +172,28 @@ const Index = () => {
             <LancamentoTrafegoPage />
           </TabsContent>
 
+          <TabsContent value="times" className="space-y-6">
+            <div className="opacity-0 animate-fade-in">
+              <h2 className="font-display text-3xl font-bold text-foreground">Times</h2>
+              <p className="text-muted-foreground">Gerencie os times da equipe comercial</p>
+            </div>
+            <GestaoTimes times={allTimes} />
+          </TabsContent>
+
+          <TabsContent value="lideres" className="space-y-6">
+            <div className="opacity-0 animate-fade-in">
+              <h2 className="font-display text-3xl font-bold text-foreground">Líderes Comerciais</h2>
+              <p className="text-muted-foreground">Gerencie os líderes de cada time</p>
+            </div>
+            <GestaoLideres lideres={allLideres} times={allTimes} />
+          </TabsContent>
+
           <TabsContent value="closers" className="space-y-6">
             <div className="opacity-0 animate-fade-in">
               <h2 className="font-display text-3xl font-bold text-foreground">Closers</h2>
               <p className="text-muted-foreground">Gerencie os closers da equipe</p>
             </div>
-            <GestaoClosers closers={allClosers} />
+            <GestaoClosers closers={allClosers} times={allTimes} />
           </TabsContent>
 
           <TabsContent value="sdrs" className="space-y-6">
@@ -163,7 +201,7 @@ const Index = () => {
               <h2 className="font-display text-3xl font-bold text-foreground">SDRs</h2>
               <p className="text-muted-foreground">Gerencie os SDRs da equipe</p>
             </div>
-            <GestaoSDRs sdrs={allSdrs} />
+            <GestaoSDRs sdrs={allSdrs} times={allTimes} />
           </TabsContent>
 
           <TabsContent value="origens" className="space-y-6">
