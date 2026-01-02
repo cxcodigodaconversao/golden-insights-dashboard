@@ -31,6 +31,7 @@ const Index = () => {
   const { data: allOrigens = [] } = useOrigens(true);
 
   const closersList = useMemo(() => closersData.map(c => c.nome), [closersData]);
+  const sdrsList = useMemo(() => sdrsData.map(s => s.nome), [sdrsData]);
 
   const handlePeriodChange = (start: Date, end: Date, type: PeriodType) => {
     setDateRange({ start, end });
@@ -103,6 +104,7 @@ const Index = () => {
             <DashboardContent 
               atendimentos={atendimentos}
               closersList={closersList}
+              sdrsList={sdrsList}
               dateRange={dateRange}
               isLoading={isLoading}
             />

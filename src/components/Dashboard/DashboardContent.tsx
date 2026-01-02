@@ -3,6 +3,9 @@ import { KPICard } from "@/components/Dashboard/KPICard";
 import { RevenueChart } from "@/components/Dashboard/RevenueChart";
 import { StatusChart } from "@/components/Dashboard/StatusChart";
 import { CloserRanking } from "@/components/Dashboard/CloserRanking";
+import { SDRRanking } from "@/components/Dashboard/SDRRanking";
+import { ConversionFunnel } from "@/components/Dashboard/ConversionFunnel";
+import { PeriodComparison } from "@/components/Dashboard/PeriodComparison";
 import { AtendimentosTable } from "@/components/Dashboard/AtendimentosTable";
 import { Atendimento, CloserStats, calcularMetricas, calcularRankingClosers } from "@/hooks/useAtendimentos";
 import { DollarSign, Users, TrendingUp, Target, Phone, Loader2 } from "lucide-react";
@@ -11,11 +14,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 interface DashboardContentProps {
   atendimentos: Atendimento[];
   closersList: string[];
+  sdrsList: string[];
   dateRange: { start: Date; end: Date };
   isLoading: boolean;
 }
 
-export function DashboardContent({ atendimentos, closersList, dateRange, isLoading }: DashboardContentProps) {
+export function DashboardContent({ atendimentos, closersList, sdrsList, dateRange, isLoading }: DashboardContentProps) {
   const filteredData = useMemo(() => {
     return atendimentos.filter(
       (a) => a.dataCall >= dateRange.start && a.dataCall <= dateRange.end
@@ -134,20 +138,48 @@ export function DashboardContent({ atendimentos, closersList, dateRange, isLoadi
         </div>
       </div>
 
-      {/* Ranking e Tabela */}
-      <div className="grid gap-6 lg:grid-cols-3">
+      {/* Funil e Comparativo */}
+      <div className="mb-8 grid gap-6 lg:grid-cols-2">
+        <div className="rounded-xl border border-border bg-card p-6 card-shadow opacity-0 animate-fade-in stagger-5">
+          <h3 className="mb-4 font-display text-lg font-semibold text-foreground">
+            Funil de Conversão
+          </h3>
+          <ConversionFunnel data={filteredData} />
+        </div>
+        <div className="rounded-xl border border-border bg-card p-6 card-shadow opacity-0 animate-fade-in stagger-5">
+          <h3 className="mb-4 font-display text-lg font-semibold text-foreground">
+            Comparativo de Períodos
+          </h3>
+          <PeriodComparison 
+            data={atendimentos} 
+            currentStart={dateRange.start} 
+            currentEnd={dateRange.end} 
+          />
+        </div>
+      </div>
+
+      {/* Rankings */}
+      <div className="mb-8 grid gap-6 lg:grid-cols-2">
         <div className="rounded-xl border border-border bg-card p-6 card-shadow opacity-0 animate-fade-in stagger-5">
           <h3 className="mb-4 font-display text-lg font-semibold text-foreground">
             Ranking de Closers
           </h3>
           <CloserRanking data={ranking} />
         </div>
-        <div className="lg:col-span-2 rounded-xl border border-border bg-card p-6 card-shadow opacity-0 animate-fade-in stagger-5">
+        <div className="rounded-xl border border-border bg-card p-6 card-shadow opacity-0 animate-fade-in stagger-5">
           <h3 className="mb-4 font-display text-lg font-semibold text-foreground">
-            Atendimentos
+            Ranking de SDRs
           </h3>
-          <AtendimentosTable data={filteredData} />
+          <SDRRanking data={filteredData} sdrsList={sdrsList} />
         </div>
+      </div>
+
+      {/* Tabela de Atendimentos */}
+      <div className="rounded-xl border border-border bg-card p-6 card-shadow opacity-0 animate-fade-in stagger-5">
+        <h3 className="mb-4 font-display text-lg font-semibold text-foreground">
+          Atendimentos
+        </h3>
+        <AtendimentosTable data={filteredData} />
       </div>
     </>
   );
