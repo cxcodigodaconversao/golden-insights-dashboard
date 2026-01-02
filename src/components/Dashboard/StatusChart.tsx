@@ -1,5 +1,5 @@
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts";
-import { Atendimento } from "@/data/mockData";
+import { Atendimento } from "@/hooks/useAtendimentos";
 
 interface StatusChartProps {
   data: Atendimento[];

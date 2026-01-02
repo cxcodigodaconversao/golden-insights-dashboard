@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Atendimento, statusColors, origens, closers } from "@/data/mockData";
+import { Atendimento, statusColors, useClosers, useOrigens } from "@/hooks/useAtendimentos";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -19,6 +19,12 @@ export function AtendimentosTable({ data }: AtendimentosTableProps) {
   const [origemFilter, setOrigemFilter] = useState<string>("all");
   const [closerFilter, setCloserFilter] = useState<string>("all");
 
+  const { data: closersData = [] } = useClosers();
+  const { data: origensData = [] } = useOrigens();
+
+  const closers = closersData.map(c => c.nome);
+  const origens = origensData.map(o => o.nome);
+
   const uniqueStatuses = [...new Set(data.map(a => {
     if (a.status.includes("Venda")) return "Venda";
     return a.status;
@@ -27,7 +33,7 @@ export function AtendimentosTable({ data }: AtendimentosTableProps) {
   const filteredData = data.filter(item => {
     const matchesSearch = 
       item.nome.toLowerCase().includes(search.toLowerCase()) ||
-      item.email.toLowerCase().includes(search.toLowerCase());
+      (item.email || "").toLowerCase().includes(search.toLowerCase());
     
     const matchesStatus = statusFilter === "all" || 
       (statusFilter === "Venda" && item.status.includes("Venda")) ||
@@ -48,7 +54,7 @@ export function AtendimentosTable({ data }: AtendimentosTableProps) {
     return { bg: "bg-secondary", text: "text-secondary-foreground" };
   };
 
-  const formatCurrency = (value?: number) => {
+  const formatCurrency = (value?: number | null) => {
     if (!value) return "-";
     return new Intl.NumberFormat("pt-BR", {
       style: "currency",
@@ -128,7 +134,7 @@ export function AtendimentosTable({ data }: AtendimentosTableProps) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredData.map((item, index) => {
+            {filteredData.map((item) => {
               const style = getStatusStyle(item.status);
               return (
                 <TableRow 
@@ -138,7 +144,7 @@ export function AtendimentosTable({ data }: AtendimentosTableProps) {
                   <TableCell>
                     <div>
                       <p className="font-medium text-foreground">{item.nome}</p>
-                      <p className="text-sm text-muted-foreground">{item.email}</p>
+                      <p className="text-sm text-muted-foreground">{item.email || "-"}</p>
                     </div>
                   </TableCell>
                   <TableCell>
