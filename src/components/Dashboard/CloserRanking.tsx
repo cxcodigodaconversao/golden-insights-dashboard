@@ -1,5 +1,5 @@
 import { Trophy, TrendingUp, Users } from "lucide-react";
-import { CloserStats } from "@/data/mockData";
+import { CloserStats } from "@/hooks/useAtendimentos";
 import { cn } from "@/lib/utils";
 
 interface CloserRankingProps {

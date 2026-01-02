@@ -14,7 +14,120 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      atendimentos: {
+        Row: {
+          closer: string
+          created_at: string
+          data_call: string
+          email: string | null
+          gravacao: string | null
+          id: string
+          info_sdr: string | null
+          nome: string
+          origem: string
+          sdr: string
+          status: string
+          telefone: string | null
+          updated_at: string
+          valor: number | null
+        }
+        Insert: {
+          closer: string
+          created_at?: string
+          data_call?: string
+          email?: string | null
+          gravacao?: string | null
+          id?: string
+          info_sdr?: string | null
+          nome: string
+          origem: string
+          sdr: string
+          status?: string
+          telefone?: string | null
+          updated_at?: string
+          valor?: number | null
+        }
+        Update: {
+          closer?: string
+          created_at?: string
+          data_call?: string
+          email?: string | null
+          gravacao?: string | null
+          id?: string
+          info_sdr?: string | null
+          nome?: string
+          origem?: string
+          sdr?: string
+          status?: string
+          telefone?: string | null
+          updated_at?: string
+          valor?: number | null
+        }
+        Relationships: []
+      }
+      closers: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          id: string
+          nome: string
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          id?: string
+          nome: string
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          id?: string
+          nome?: string
+        }
+        Relationships: []
+      }
+      origens: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          id: string
+          nome: string
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          id?: string
+          nome: string
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          id?: string
+          nome?: string
+        }
+        Relationships: []
+      }
+      sdrs: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          id: string
+          nome: string
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          id?: string
+          nome: string
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          id?: string
+          nome?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

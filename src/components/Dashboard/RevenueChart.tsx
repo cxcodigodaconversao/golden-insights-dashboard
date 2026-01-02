@@ -1,7 +1,7 @@
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
-import { format, eachDayOfInterval, startOfMonth, endOfMonth } from "date-fns";
+import { format, eachDayOfInterval } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Atendimento } from "@/data/mockData";
+import { Atendimento } from "@/hooks/useAtendimentos";
 
 interface RevenueChartProps {
   data: Atendimento[];
