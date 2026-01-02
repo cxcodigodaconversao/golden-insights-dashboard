@@ -13,7 +13,7 @@ import { startOfMonth, endOfMonth, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 const Index = () => {
-  const [periodType, setPeriodType] = useState<PeriodType>("month");
+  const [periodType, setPeriodType] = useState<PeriodType>("custom");
   const [dateRange, setDateRange] = useState({
     start: startOfMonth(new Date()),
     end: endOfMonth(new Date()),
@@ -174,7 +174,7 @@ const Index = () => {
       {/* Footer */}
       <footer className="border-t border-border py-6">
         <div className="container text-center text-sm text-muted-foreground">
-          <p>FC-360 Dashboard © {new Date().getFullYear()} • Relatório Diário de Atendimentos</p>
+          <p>CX - Comercial 10X © {new Date().getFullYear()} • Dashboard de Resultados</p>
         </div>
       </footer>
     </div>
