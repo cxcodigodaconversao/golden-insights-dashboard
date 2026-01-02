@@ -58,7 +58,7 @@ const Index = () => {
       <main className="container py-8">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <TabsList className="bg-secondary/50 p-1 h-auto flex-wrap">
+            <TabsList className="bg-secondary/50 p-1 h-auto grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-11 gap-1 w-full">
               <TabsTrigger value="dashboard" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2">
                 <LayoutDashboard className="h-4 w-4" />
                 Dashboard
