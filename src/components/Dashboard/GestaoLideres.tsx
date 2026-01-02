@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { Plus, UserCheck, UserX, Pencil, Trash2 } from "lucide-react";
+import { Plus, UserCheck, UserX, Pencil, Trash2, Crown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -20,51 +20,53 @@ interface Time {
   ativo: boolean;
 }
 
-interface GestaoClosersProps {
-  closers: { id: string; nome: string; ativo: boolean; time_id?: string | null }[];
-  times?: Time[];
+interface Lider {
+  id: string;
+  nome: string;
+  time_id: string | null;
+  ativo: boolean;
 }
 
-export function GestaoClosers({ closers, times = [] }: GestaoClosersProps) {
+interface GestaoLideresProps {
+  lideres: Lider[];
+  times: Time[];
+}
+
+export function GestaoLideres({ lideres, times }: GestaoLideresProps) {
   const queryClient = useQueryClient();
-  const [novoCloser, setNovoCloser] = useState("");
+  const [novoLider, setNovoLider] = useState("");
   const [novoTimeId, setNovoTimeId] = useState<string>("");
   const [isAdding, setIsAdding] = useState(false);
-  const [editingCloser, setEditingCloser] = useState<{ id: string; nome: string; time_id?: string | null } | null>(null);
+  const [editingLider, setEditingLider] = useState<Lider | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const getTime = (timeId: string | null | undefined) => {
+  const getTimeName = (timeId: string | null) => {
     if (!timeId) return null;
-    return times.find(t => t.id === timeId) || null;
+    const time = times.find(t => t.id === timeId);
+    return time ? time : null;
   };
 
-  const timesAtivos = times.filter(t => t.ativo);
-
-  const handleAddCloser = async () => {
-    if (!novoCloser.trim()) {
-      toast.error("Digite o nome do closer");
+  const handleAddLider = async () => {
+    if (!novoLider.trim()) {
+      toast.error("Digite o nome do líder");
       return;
     }
 
     setIsAdding(true);
     try {
-      const { error } = await supabase.from("closers").insert({ 
-        nome: novoCloser.trim(),
+      const { error } = await supabase.from("lideres_comerciais").insert({ 
+        nome: novoLider.trim(),
         time_id: novoTimeId || null
       });
       if (error) throw error;
 
-      toast.success("Closer adicionado com sucesso!");
-      queryClient.invalidateQueries({ queryKey: ["closers"] });
-      setNovoCloser("");
+      toast.success("Líder adicionado com sucesso!");
+      queryClient.invalidateQueries({ queryKey: ["lideres"] });
+      setNovoLider("");
       setNovoTimeId("");
     } catch (error: any) {
-      if (error.code === "23505") {
-        toast.error("Este closer já existe");
-      } else {
-        toast.error("Erro ao adicionar closer");
-      }
+      toast.error("Erro ao adicionar líder");
     } finally {
       setIsAdding(false);
     }
@@ -73,51 +75,47 @@ export function GestaoClosers({ closers, times = [] }: GestaoClosersProps) {
   const toggleAtivo = async (id: string, ativo: boolean) => {
     try {
       const { error } = await supabase
-        .from("closers")
+        .from("lideres_comerciais")
         .update({ ativo: !ativo })
         .eq("id", id);
       if (error) throw error;
 
-      toast.success(ativo ? "Closer desativado" : "Closer ativado");
-      queryClient.invalidateQueries({ queryKey: ["closers"] });
+      toast.success(ativo ? "Líder desativado" : "Líder ativado");
+      queryClient.invalidateQueries({ queryKey: ["lideres"] });
     } catch (error) {
-      toast.error("Erro ao atualizar closer");
+      toast.error("Erro ao atualizar líder");
     }
   };
 
-  const handleEdit = (closer: { id: string; nome: string; time_id?: string | null }) => {
-    setEditingCloser({ ...closer });
+  const handleEdit = (lider: Lider) => {
+    setEditingLider({ ...lider });
     setIsEditDialogOpen(true);
   };
 
   const handleSaveEdit = async () => {
-    if (!editingCloser || !editingCloser.nome.trim()) {
-      toast.error("Digite o nome do closer");
+    if (!editingLider || !editingLider.nome.trim()) {
+      toast.error("Digite o nome do líder");
       return;
     }
 
     setIsSubmitting(true);
     try {
       const { error } = await supabase
-        .from("closers")
+        .from("lideres_comerciais")
         .update({ 
-          nome: editingCloser.nome.trim(),
-          time_id: editingCloser.time_id || null
+          nome: editingLider.nome.trim(),
+          time_id: editingLider.time_id || null
         })
-        .eq("id", editingCloser.id);
+        .eq("id", editingLider.id);
 
       if (error) throw error;
 
-      toast.success("Closer atualizado com sucesso!");
-      queryClient.invalidateQueries({ queryKey: ["closers"] });
+      toast.success("Líder atualizado com sucesso!");
+      queryClient.invalidateQueries({ queryKey: ["lideres"] });
       setIsEditDialogOpen(false);
-      setEditingCloser(null);
+      setEditingLider(null);
     } catch (error: any) {
-      if (error.code === "23505") {
-        toast.error("Este nome já existe");
-      } else {
-        toast.error("Erro ao atualizar closer");
-      }
+      toast.error("Erro ao atualizar líder");
     } finally {
       setIsSubmitting(false);
     }
@@ -126,66 +124,65 @@ export function GestaoClosers({ closers, times = [] }: GestaoClosersProps) {
   const handleDelete = async (id: string) => {
     try {
       const { error } = await supabase
-        .from("closers")
+        .from("lideres_comerciais")
         .delete()
         .eq("id", id);
 
       if (error) throw error;
 
-      toast.success("Closer excluído com sucesso!");
-      queryClient.invalidateQueries({ queryKey: ["closers"] });
+      toast.success("Líder excluído com sucesso!");
+      queryClient.invalidateQueries({ queryKey: ["lideres"] });
     } catch (error: any) {
-      if (error.code === "23503") {
-        toast.error("Este closer possui registros vinculados e não pode ser excluído");
-      } else {
-        toast.error("Erro ao excluir closer");
-      }
+      toast.error("Erro ao excluir líder");
     }
   };
+
+  const timesAtivos = times.filter(t => t.ativo);
 
   return (
     <Card className="border-border bg-card">
       <CardHeader>
-        <CardTitle className="text-foreground">Gestão de Closers</CardTitle>
+        <CardTitle className="flex items-center gap-2 text-foreground">
+          <Crown className="h-5 w-5 text-primary" />
+          Gestão de Líderes Comerciais
+        </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Adicionar novo */}
         <div className="flex flex-wrap gap-3 items-end">
           <div className="space-y-2">
-            <Label className="text-foreground">Nome</Label>
+            <Label className="text-foreground">Nome do Líder</Label>
             <Input
-              value={novoCloser}
-              onChange={(e) => setNovoCloser(e.target.value)}
-              placeholder="Nome do novo closer"
+              value={novoLider}
+              onChange={(e) => setNovoLider(e.target.value)}
+              placeholder="Nome do líder"
               className="bg-secondary border-border w-64"
-              onKeyDown={(e) => e.key === "Enter" && handleAddCloser()}
+              onKeyDown={(e) => e.key === "Enter" && handleAddLider()}
             />
           </div>
-          {timesAtivos.length > 0 && (
-            <div className="space-y-2">
-              <Label className="text-foreground">Time</Label>
-              <Select value={novoTimeId} onValueChange={setNovoTimeId}>
-                <SelectTrigger className="w-48 bg-secondary border-border">
-                  <SelectValue placeholder="Selecione o time" />
-                </SelectTrigger>
-                <SelectContent className="bg-card border-border">
-                  {timesAtivos.map((time) => (
-                    <SelectItem key={time.id} value={time.id}>
-                      <div className="flex items-center gap-2">
-                        <div 
-                          className="w-3 h-3 rounded-full" 
-                          style={{ backgroundColor: time.cor }}
-                        />
-                        {time.nome}
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
+          <div className="space-y-2">
+            <Label className="text-foreground">Time</Label>
+            <Select value={novoTimeId} onValueChange={setNovoTimeId}>
+              <SelectTrigger className="w-48 bg-secondary border-border">
+                <SelectValue placeholder="Selecione o time" />
+              </SelectTrigger>
+              <SelectContent className="bg-card border-border">
+                {timesAtivos.map((time) => (
+                  <SelectItem key={time.id} value={time.id}>
+                    <div className="flex items-center gap-2">
+                      <div 
+                        className="w-3 h-3 rounded-full" 
+                        style={{ backgroundColor: time.cor }}
+                      />
+                      {time.nome}
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
           <Button
-            onClick={handleAddCloser}
+            onClick={handleAddLider}
             disabled={isAdding}
             className="bg-primary text-primary-foreground"
           >
@@ -206,18 +203,23 @@ export function GestaoClosers({ closers, times = [] }: GestaoClosersProps) {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {closers.length === 0 ? (
+              {lideres.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
-                    Nenhum closer cadastrado
+                    Nenhum líder cadastrado
                   </TableCell>
                 </TableRow>
               ) : (
-                closers.map((closer) => {
-                  const time = getTime(closer.time_id);
+                lideres.map((lider) => {
+                  const time = getTimeName(lider.time_id);
                   return (
-                    <TableRow key={closer.id} className="border-border hover:bg-secondary/50">
-                      <TableCell className="text-foreground font-medium">{closer.nome}</TableCell>
+                    <TableRow key={lider.id} className="border-border hover:bg-secondary/50">
+                      <TableCell className="text-foreground font-medium">
+                        <div className="flex items-center gap-2">
+                          <Crown className="h-4 w-4 text-primary" />
+                          {lider.nome}
+                        </div>
+                      </TableCell>
                       <TableCell>
                         {time ? (
                           <Badge 
@@ -231,12 +233,12 @@ export function GestaoClosers({ closers, times = [] }: GestaoClosersProps) {
                             {time.nome}
                           </Badge>
                         ) : (
-                          <span className="text-muted-foreground text-sm">-</span>
+                          <span className="text-muted-foreground text-sm">Sem time</span>
                         )}
                       </TableCell>
                       <TableCell>
-                        <Badge variant={closer.ativo ? "default" : "secondary"}>
-                          {closer.ativo ? "Ativo" : "Inativo"}
+                        <Badge variant={lider.ativo ? "default" : "secondary"}>
+                          {lider.ativo ? "Ativo" : "Inativo"}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right">
@@ -244,7 +246,7 @@ export function GestaoClosers({ closers, times = [] }: GestaoClosersProps) {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => handleEdit(closer)}
+                            onClick={() => handleEdit(lider)}
                             className="hover:bg-secondary"
                           >
                             <Pencil className="h-4 w-4 text-muted-foreground" />
@@ -252,10 +254,10 @@ export function GestaoClosers({ closers, times = [] }: GestaoClosersProps) {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => toggleAtivo(closer.id, closer.ativo)}
+                            onClick={() => toggleAtivo(lider.id, lider.ativo)}
                             className="hover:bg-secondary"
                           >
-                            {closer.ativo ? (
+                            {lider.ativo ? (
                               <UserX className="h-4 w-4 text-destructive" />
                             ) : (
                               <UserCheck className="h-4 w-4 text-success" />
@@ -271,13 +273,13 @@ export function GestaoClosers({ closers, times = [] }: GestaoClosersProps) {
                               <AlertDialogHeader>
                                 <AlertDialogTitle className="text-foreground">Confirmar exclusão</AlertDialogTitle>
                                 <AlertDialogDescription>
-                                  Tem certeza que deseja excluir o closer "{closer.nome}"? Esta ação não pode ser desfeita.
+                                  Tem certeza que deseja excluir o líder "{lider.nome}"? Esta ação não pode ser desfeita.
                                 </AlertDialogDescription>
                               </AlertDialogHeader>
                               <AlertDialogFooter>
                                 <AlertDialogCancel className="border-border">Cancelar</AlertDialogCancel>
                                 <AlertDialogAction
-                                  onClick={() => handleDelete(closer.id)}
+                                  onClick={() => handleDelete(lider.id)}
                                   className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                                 >
                                   Excluir
@@ -300,44 +302,42 @@ export function GestaoClosers({ closers, times = [] }: GestaoClosersProps) {
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="bg-card border-border">
           <DialogHeader>
-            <DialogTitle className="text-foreground">Editar Closer</DialogTitle>
+            <DialogTitle className="text-foreground">Editar Líder</DialogTitle>
           </DialogHeader>
-          {editingCloser && (
+          {editingLider && (
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label className="text-foreground">Nome</Label>
                 <Input
-                  value={editingCloser.nome}
-                  onChange={(e) => setEditingCloser({ ...editingCloser, nome: e.target.value })}
+                  value={editingLider.nome}
+                  onChange={(e) => setEditingLider({ ...editingLider, nome: e.target.value })}
                   className="bg-secondary border-border"
                 />
               </div>
-              {timesAtivos.length > 0 && (
-                <div className="space-y-2">
-                  <Label className="text-foreground">Time</Label>
-                  <Select 
-                    value={editingCloser.time_id || ""} 
-                    onValueChange={(value) => setEditingCloser({ ...editingCloser, time_id: value || null })}
-                  >
-                    <SelectTrigger className="bg-secondary border-border">
-                      <SelectValue placeholder="Selecione o time" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-card border-border">
-                      {timesAtivos.map((time) => (
-                        <SelectItem key={time.id} value={time.id}>
-                          <div className="flex items-center gap-2">
-                            <div 
-                              className="w-3 h-3 rounded-full" 
-                              style={{ backgroundColor: time.cor }}
-                            />
-                            {time.nome}
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
+              <div className="space-y-2">
+                <Label className="text-foreground">Time</Label>
+                <Select 
+                  value={editingLider.time_id || ""} 
+                  onValueChange={(value) => setEditingLider({ ...editingLider, time_id: value || null })}
+                >
+                  <SelectTrigger className="bg-secondary border-border">
+                    <SelectValue placeholder="Selecione o time" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-card border-border">
+                    {timesAtivos.map((time) => (
+                      <SelectItem key={time.id} value={time.id}>
+                        <div className="flex items-center gap-2">
+                          <div 
+                            className="w-3 h-3 rounded-full" 
+                            style={{ backgroundColor: time.cor }}
+                          />
+                          {time.nome}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           )}
           <DialogFooter>

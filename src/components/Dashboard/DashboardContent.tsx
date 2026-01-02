@@ -4,6 +4,7 @@ import { RevenueChart } from "@/components/Dashboard/RevenueChart";
 import { StatusChart } from "@/components/Dashboard/StatusChart";
 import { CloserRanking } from "@/components/Dashboard/CloserRanking";
 import { SDRRanking } from "@/components/Dashboard/SDRRanking";
+import { TeamRanking } from "@/components/Dashboard/TeamRanking";
 import { ConversionFunnel } from "@/components/Dashboard/ConversionFunnel";
 import { PeriodComparison } from "@/components/Dashboard/PeriodComparison";
 import { AtendimentosTable } from "@/components/Dashboard/AtendimentosTable";
@@ -11,15 +12,39 @@ import { Atendimento, CloserStats, calcularMetricas, calcularRankingClosers } fr
 import { DollarSign, Users, TrendingUp, Target, Phone, Loader2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
+interface Time {
+  id: string;
+  nome: string;
+  cor: string;
+  ativo: boolean;
+}
+
+interface Closer {
+  id: string;
+  nome: string;
+  time_id: string | null;
+  ativo: boolean;
+}
+
 interface DashboardContentProps {
   atendimentos: Atendimento[];
   closersList: string[];
   sdrsList: string[];
   dateRange: { start: Date; end: Date };
   isLoading: boolean;
+  times?: Time[];
+  closers?: Closer[];
 }
 
-export function DashboardContent({ atendimentos, closersList, sdrsList, dateRange, isLoading }: DashboardContentProps) {
+export function DashboardContent({ 
+  atendimentos, 
+  closersList, 
+  sdrsList, 
+  dateRange, 
+  isLoading,
+  times = [],
+  closers = []
+}: DashboardContentProps) {
   const filteredData = useMemo(() => {
     return atendimentos.filter(
       (a) => a.dataCall >= dateRange.start && a.dataCall <= dateRange.end
@@ -158,7 +183,19 @@ export function DashboardContent({ atendimentos, closersList, sdrsList, dateRang
         </div>
       </div>
 
-      {/* Rankings */}
+      {/* Ranking de Times */}
+      {times.length > 0 && (
+        <div className="mb-8">
+          <div className="rounded-xl border border-border bg-card p-6 card-shadow opacity-0 animate-fade-in stagger-5">
+            <h3 className="mb-4 font-display text-lg font-semibold text-foreground">
+              🏆 Ranking de Times
+            </h3>
+            <TeamRanking data={filteredData} times={times} closers={closers} />
+          </div>
+        </div>
+      )}
+
+      {/* Rankings de Closers e SDRs */}
       <div className="mb-8 grid gap-6 lg:grid-cols-2">
         <div className="rounded-xl border border-border bg-card p-6 card-shadow opacity-0 animate-fade-in stagger-5">
           <h3 className="mb-4 font-display text-lg font-semibold text-foreground">

@@ -6,23 +6,40 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Plus, UserCheck, UserX, Pencil, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
-interface GestaoSDRsProps {
-  sdrs: { id: string; nome: string; ativo: boolean }[];
+interface Time {
+  id: string;
+  nome: string;
+  cor: string;
+  ativo: boolean;
 }
 
-export function GestaoSDRs({ sdrs }: GestaoSDRsProps) {
+interface GestaoSDRsProps {
+  sdrs: { id: string; nome: string; ativo: boolean; time_id?: string | null }[];
+  times?: Time[];
+}
+
+export function GestaoSDRs({ sdrs, times = [] }: GestaoSDRsProps) {
   const queryClient = useQueryClient();
   const [novoSdr, setNovoSdr] = useState("");
+  const [novoTimeId, setNovoTimeId] = useState<string>("");
   const [isAdding, setIsAdding] = useState(false);
-  const [editingSdr, setEditingSdr] = useState<{ id: string; nome: string } | null>(null);
+  const [editingSdr, setEditingSdr] = useState<{ id: string; nome: string; time_id?: string | null } | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const getTime = (timeId: string | null | undefined) => {
+    if (!timeId) return null;
+    return times.find(t => t.id === timeId) || null;
+  };
+
+  const timesAtivos = times.filter(t => t.ativo);
 
   const handleAddSdr = async () => {
     if (!novoSdr.trim()) {
@@ -32,12 +49,16 @@ export function GestaoSDRs({ sdrs }: GestaoSDRsProps) {
 
     setIsAdding(true);
     try {
-      const { error } = await supabase.from("sdrs").insert({ nome: novoSdr.trim() });
+      const { error } = await supabase.from("sdrs").insert({ 
+        nome: novoSdr.trim(),
+        time_id: novoTimeId || null
+      });
       if (error) throw error;
 
       toast.success("SDR adicionado com sucesso!");
       queryClient.invalidateQueries({ queryKey: ["sdrs"] });
       setNovoSdr("");
+      setNovoTimeId("");
     } catch (error: any) {
       if (error.code === "23505") {
         toast.error("Este SDR já existe");
@@ -64,7 +85,7 @@ export function GestaoSDRs({ sdrs }: GestaoSDRsProps) {
     }
   };
 
-  const handleEdit = (sdr: { id: string; nome: string }) => {
+  const handleEdit = (sdr: { id: string; nome: string; time_id?: string | null }) => {
     setEditingSdr({ ...sdr });
     setIsEditDialogOpen(true);
   };
@@ -79,7 +100,10 @@ export function GestaoSDRs({ sdrs }: GestaoSDRsProps) {
     try {
       const { error } = await supabase
         .from("sdrs")
-        .update({ nome: editingSdr.nome.trim() })
+        .update({ 
+          nome: editingSdr.nome.trim(),
+          time_id: editingSdr.time_id || null
+        })
         .eq("id", editingSdr.id);
 
       if (error) throw error;
@@ -126,14 +150,40 @@ export function GestaoSDRs({ sdrs }: GestaoSDRsProps) {
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Adicionar novo */}
-        <div className="flex gap-3">
-          <Input
-            value={novoSdr}
-            onChange={(e) => setNovoSdr(e.target.value)}
-            placeholder="Nome do novo SDR"
-            className="bg-secondary border-border max-w-sm"
-            onKeyDown={(e) => e.key === "Enter" && handleAddSdr()}
-          />
+        <div className="flex flex-wrap gap-3 items-end">
+          <div className="space-y-2">
+            <Label className="text-foreground">Nome</Label>
+            <Input
+              value={novoSdr}
+              onChange={(e) => setNovoSdr(e.target.value)}
+              placeholder="Nome do novo SDR"
+              className="bg-secondary border-border w-64"
+              onKeyDown={(e) => e.key === "Enter" && handleAddSdr()}
+            />
+          </div>
+          {timesAtivos.length > 0 && (
+            <div className="space-y-2">
+              <Label className="text-foreground">Time</Label>
+              <Select value={novoTimeId} onValueChange={setNovoTimeId}>
+                <SelectTrigger className="w-48 bg-secondary border-border">
+                  <SelectValue placeholder="Selecione o time" />
+                </SelectTrigger>
+                <SelectContent className="bg-card border-border">
+                  {timesAtivos.map((time) => (
+                    <SelectItem key={time.id} value={time.id}>
+                      <div className="flex items-center gap-2">
+                        <div 
+                          className="w-3 h-3 rounded-full" 
+                          style={{ backgroundColor: time.cor }}
+                        />
+                        {time.nome}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
           <Button
             onClick={handleAddSdr}
             disabled={isAdding}
@@ -150,6 +200,7 @@ export function GestaoSDRs({ sdrs }: GestaoSDRsProps) {
             <TableHeader>
               <TableRow className="border-border hover:bg-secondary/50">
                 <TableHead className="text-muted-foreground">Nome</TableHead>
+                <TableHead className="text-muted-foreground">Time</TableHead>
                 <TableHead className="text-muted-foreground">Status</TableHead>
                 <TableHead className="text-muted-foreground text-right">Ações</TableHead>
               </TableRow>
@@ -157,69 +208,88 @@ export function GestaoSDRs({ sdrs }: GestaoSDRsProps) {
             <TableBody>
               {sdrs.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={3} className="text-center text-muted-foreground py-8">
+                  <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
                     Nenhum SDR cadastrado
                   </TableCell>
                 </TableRow>
               ) : (
-                sdrs.map((sdr) => (
-                  <TableRow key={sdr.id} className="border-border hover:bg-secondary/50">
-                    <TableCell className="text-foreground font-medium">{sdr.nome}</TableCell>
-                    <TableCell>
-                      <Badge variant={sdr.ativo ? "default" : "secondary"}>
-                        {sdr.ativo ? "Ativo" : "Inativo"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleEdit(sdr)}
-                          className="hover:bg-secondary"
-                        >
-                          <Pencil className="h-4 w-4 text-muted-foreground" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => toggleAtivo(sdr.id, sdr.ativo)}
-                          className="hover:bg-secondary"
-                        >
-                          {sdr.ativo ? (
-                            <UserX className="h-4 w-4 text-destructive" />
-                          ) : (
-                            <UserCheck className="h-4 w-4 text-success" />
-                          )}
-                        </Button>
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="ghost" size="sm" className="hover:bg-secondary">
-                              <Trash2 className="h-4 w-4 text-destructive" />
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent className="bg-card border-border">
-                            <AlertDialogHeader>
-                              <AlertDialogTitle className="text-foreground">Confirmar exclusão</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                Tem certeza que deseja excluir o SDR "{sdr.nome}"? Esta ação não pode ser desfeita.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel className="border-border">Cancelar</AlertDialogCancel>
-                              <AlertDialogAction
-                                onClick={() => handleDelete(sdr.id)}
-                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                              >
-                                Excluir
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
+                sdrs.map((sdr) => {
+                  const time = getTime(sdr.time_id);
+                  return (
+                    <TableRow key={sdr.id} className="border-border hover:bg-secondary/50">
+                      <TableCell className="text-foreground font-medium">{sdr.nome}</TableCell>
+                      <TableCell>
+                        {time ? (
+                          <Badge 
+                            variant="outline" 
+                            style={{ 
+                              borderColor: time.cor,
+                              color: time.cor,
+                              backgroundColor: `${time.cor}20`
+                            }}
+                          >
+                            {time.nome}
+                          </Badge>
+                        ) : (
+                          <span className="text-muted-foreground text-sm">-</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={sdr.ativo ? "default" : "secondary"}>
+                          {sdr.ativo ? "Ativo" : "Inativo"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEdit(sdr)}
+                            className="hover:bg-secondary"
+                          >
+                            <Pencil className="h-4 w-4 text-muted-foreground" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => toggleAtivo(sdr.id, sdr.ativo)}
+                            className="hover:bg-secondary"
+                          >
+                            {sdr.ativo ? (
+                              <UserX className="h-4 w-4 text-destructive" />
+                            ) : (
+                              <UserCheck className="h-4 w-4 text-success" />
+                            )}
+                          </Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="ghost" size="sm" className="hover:bg-secondary">
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent className="bg-card border-border">
+                              <AlertDialogHeader>
+                                <AlertDialogTitle className="text-foreground">Confirmar exclusão</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Tem certeza que deseja excluir o SDR "{sdr.nome}"? Esta ação não pode ser desfeita.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel className="border-border">Cancelar</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => handleDelete(sdr.id)}
+                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                >
+                                  Excluir
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
               )}
             </TableBody>
           </Table>
@@ -242,6 +312,32 @@ export function GestaoSDRs({ sdrs }: GestaoSDRsProps) {
                   className="bg-secondary border-border"
                 />
               </div>
+              {timesAtivos.length > 0 && (
+                <div className="space-y-2">
+                  <Label className="text-foreground">Time</Label>
+                  <Select 
+                    value={editingSdr.time_id || ""} 
+                    onValueChange={(value) => setEditingSdr({ ...editingSdr, time_id: value || null })}
+                  >
+                    <SelectTrigger className="bg-secondary border-border">
+                      <SelectValue placeholder="Selecione o time" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-card border-border">
+                      {timesAtivos.map((time) => (
+                        <SelectItem key={time.id} value={time.id}>
+                          <div className="flex items-center gap-2">
+                            <div 
+                              className="w-3 h-3 rounded-full" 
+                              style={{ backgroundColor: time.cor }}
+                            />
+                            {time.nome}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
             </div>
           )}
           <DialogFooter>
