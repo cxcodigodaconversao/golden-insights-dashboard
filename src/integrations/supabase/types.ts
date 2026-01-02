@@ -86,6 +86,159 @@ export type Database = {
         }
         Relationships: []
       }
+      lancamentos_disparo: {
+        Row: {
+          abordados: number
+          agendados: number
+          closer_id: string
+          compareceram: number
+          confirmados: number
+          created_at: string
+          data: string
+          id: string
+          observacoes: string | null
+          receita: number
+          updated_at: string
+          vendas: number
+        }
+        Insert: {
+          abordados?: number
+          agendados?: number
+          closer_id: string
+          compareceram?: number
+          confirmados?: number
+          created_at?: string
+          data?: string
+          id?: string
+          observacoes?: string | null
+          receita?: number
+          updated_at?: string
+          vendas?: number
+        }
+        Update: {
+          abordados?: number
+          agendados?: number
+          closer_id?: string
+          compareceram?: number
+          confirmados?: number
+          created_at?: string
+          data?: string
+          id?: string
+          observacoes?: string | null
+          receita?: number
+          updated_at?: string
+          vendas?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lancamentos_disparo_closer_id_fkey"
+            columns: ["closer_id"]
+            isOneToOne: false
+            referencedRelation: "closers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lancamentos_sdr: {
+        Row: {
+          abordados: number
+          agendamentos: number
+          created_at: string
+          data: string
+          id: string
+          observacoes: string | null
+          responderam: number
+          sdr_id: string
+          updated_at: string
+          vendas_agendamentos: number
+        }
+        Insert: {
+          abordados?: number
+          agendamentos?: number
+          created_at?: string
+          data?: string
+          id?: string
+          observacoes?: string | null
+          responderam?: number
+          sdr_id: string
+          updated_at?: string
+          vendas_agendamentos?: number
+        }
+        Update: {
+          abordados?: number
+          agendamentos?: number
+          created_at?: string
+          data?: string
+          id?: string
+          observacoes?: string | null
+          responderam?: number
+          sdr_id?: string
+          updated_at?: string
+          vendas_agendamentos?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lancamentos_sdr_sdr_id_fkey"
+            columns: ["sdr_id"]
+            isOneToOne: false
+            referencedRelation: "sdrs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lancamentos_trafego: {
+        Row: {
+          abordados: number
+          agendados: number
+          closer_id: string
+          compareceram: number
+          confirmados: number
+          created_at: string
+          data: string
+          id: string
+          observacoes: string | null
+          receita: number
+          updated_at: string
+          vendas: number
+        }
+        Insert: {
+          abordados?: number
+          agendados?: number
+          closer_id: string
+          compareceram?: number
+          confirmados?: number
+          created_at?: string
+          data?: string
+          id?: string
+          observacoes?: string | null
+          receita?: number
+          updated_at?: string
+          vendas?: number
+        }
+        Update: {
+          abordados?: number
+          agendados?: number
+          closer_id?: string
+          compareceram?: number
+          confirmados?: number
+          created_at?: string
+          data?: string
+          id?: string
+          observacoes?: string | null
+          receita?: number
+          updated_at?: string
+          vendas?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lancamentos_trafego_closer_id_fkey"
+            columns: ["closer_id"]
+            isOneToOne: false
+            referencedRelation: "closers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       origens: {
         Row: {
           ativo: boolean
@@ -127,6 +280,47 @@ export type Database = {
           nome?: string
         }
         Relationships: []
+      }
+      vendas_registro: {
+        Row: {
+          closer_id: string
+          created_at: string
+          data: string
+          id: string
+          ticket: string
+          tipo: string
+          updated_at: string
+          valor: number
+        }
+        Insert: {
+          closer_id: string
+          created_at?: string
+          data?: string
+          id?: string
+          ticket: string
+          tipo: string
+          updated_at?: string
+          valor?: number
+        }
+        Update: {
+          closer_id?: string
+          created_at?: string
+          data?: string
+          id?: string
+          ticket?: string
+          tipo?: string
+          updated_at?: string
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vendas_registro_closer_id_fkey"
+            columns: ["closer_id"]
+            isOneToOne: false
+            referencedRelation: "closers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
