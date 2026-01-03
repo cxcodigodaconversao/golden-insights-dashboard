@@ -324,6 +324,102 @@ export type Database = {
           },
         ]
       }
+      metas: {
+        Row: {
+          created_at: string | null
+          id: string
+          mes: string
+          meta_agendamentos: number | null
+          meta_receita: number | null
+          meta_vendas: number | null
+          referencia_id: string
+          tipo: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          mes: string
+          meta_agendamentos?: number | null
+          meta_receita?: number | null
+          meta_vendas?: number | null
+          referencia_id: string
+          tipo: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          mes?: string
+          meta_agendamentos?: number | null
+          meta_receita?: number | null
+          meta_vendas?: number | null
+          referencia_id?: string
+          tipo?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      notificacoes_config: {
+        Row: {
+          ativo: boolean | null
+          created_at: string | null
+          emails_destino: string[] | null
+          id: string
+          threshold_queda: number | null
+          tipo: string
+          updated_at: string | null
+        }
+        Insert: {
+          ativo?: boolean | null
+          created_at?: string | null
+          emails_destino?: string[] | null
+          id?: string
+          threshold_queda?: number | null
+          tipo: string
+          updated_at?: string | null
+        }
+        Update: {
+          ativo?: boolean | null
+          created_at?: string | null
+          emails_destino?: string[] | null
+          id?: string
+          threshold_queda?: number | null
+          tipo?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      notificacoes_historico: {
+        Row: {
+          assunto: string
+          conteudo: string | null
+          destinatario: string
+          enviado_em: string | null
+          id: string
+          status: string | null
+          tipo: string
+        }
+        Insert: {
+          assunto: string
+          conteudo?: string | null
+          destinatario: string
+          enviado_em?: string | null
+          id?: string
+          status?: string | null
+          tipo: string
+        }
+        Update: {
+          assunto?: string
+          conteudo?: string | null
+          destinatario?: string
+          enviado_em?: string | null
+          id?: string
+          status?: string | null
+          tipo?: string
+        }
+        Relationships: []
+      }
       origens: {
         Row: {
           ativo: boolean

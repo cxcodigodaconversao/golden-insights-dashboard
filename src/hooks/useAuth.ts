@@ -39,39 +39,57 @@ export function useAuth(): UseAuthReturn {
 
   const fetchProfile = useCallback(async (userId: string) => {
     try {
-      const { data: profileData } = await supabase
+      console.log('[useAuth] Fetching profile for user:', userId);
+      
+      const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
         .single();
 
-      if (profileData) {
+      if (profileError) {
+        console.error('[useAuth] Error fetching profile:', profileError);
+      } else if (profileData) {
+        console.log('[useAuth] Profile loaded:', profileData);
         setProfile(profileData as Profile);
       }
 
-      const { data: roleData } = await supabase
+      const { data: roleData, error: roleError } = await supabase
         .from('user_roles')
         .select('role')
         .eq('user_id', userId)
         .single();
 
-      if (roleData?.role) {
+      if (roleError) {
+        console.error('[useAuth] Error fetching role:', roleError);
+      } else if (roleData?.role) {
+        console.log('[useAuth] Role loaded:', roleData.role);
         setRole(roleData.role as AppRole);
       }
     } catch (error) {
-      console.error('Error fetching profile:', error);
+      console.error('[useAuth] Error in fetchProfile:', error);
     }
   }, []);
 
   useEffect(() => {
+    let mounted = true;
+    console.log('[useAuth] Initializing auth...');
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
+        console.log('[useAuth] Auth state changed:', event, session?.user?.email);
+        
+        if (!mounted) return;
+        
         setSession(session);
         setUser(session?.user ?? null);
         
         if (session?.user) {
+          // Use setTimeout to avoid potential race conditions
           setTimeout(() => {
-            fetchProfile(session.user.id);
+            if (mounted) {
+              fetchProfile(session.user.id);
+            }
           }, 0);
         } else {
           setProfile(null);
@@ -82,7 +100,15 @@ export function useAuth(): UseAuthReturn {
       }
     );
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session }, error }) => {
+      if (error) {
+        console.error('[useAuth] Error getting session:', error);
+      }
+      
+      if (!mounted) return;
+      
+      console.log('[useAuth] Initial session:', session?.user?.email);
       setSession(session);
       setUser(session?.user ?? null);
       
@@ -93,7 +119,10 @@ export function useAuth(): UseAuthReturn {
       setIsLoading(false);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, [fetchProfile]);
 
   const signIn = async (email: string, password: string) => {
