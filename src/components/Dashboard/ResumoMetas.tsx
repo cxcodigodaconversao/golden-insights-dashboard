@@ -152,18 +152,16 @@ export function ResumoMetas({ teamFilter, userCloserId, userSdrId }: ResumoMetas
       const realizadoVendas = vendasAtendimentosCount + vendasDisparo + vendasTrafego;
       const realizadoReceita = receitaAtendimentos + receitaDisparo + receitaTrafego;
 
-      const metaVendas = meta?.meta_vendas || 0;
       const metaReceita = meta?.meta_receita || 0;
 
-      const progressoVendas = metaVendas > 0 ? (realizadoVendas / metaVendas) * 100 : 0;
+      // For closers, only revenue has a goal - but we still show realized vendas
       const progressoReceita = metaReceita > 0 ? (realizadoReceita / metaReceita) * 100 : 0;
 
-      // Determine status based on highest progress
-      const maxProgresso = Math.max(progressoVendas, progressoReceita);
+      // Determine status based on revenue progress only for closers
       let status: MetaProgress["status"] = "sem_meta";
-      if (meta) {
-        if (maxProgresso >= 100) status = "bateu";
-        else if (maxProgresso >= 80) status = "perto";
+      if (meta && metaReceita > 0) {
+        if (progressoReceita >= 100) status = "bateu";
+        else if (progressoReceita >= 80) status = "perto";
         else status = "atrasado";
       }
 
@@ -173,13 +171,13 @@ export function ResumoMetas({ teamFilter, userCloserId, userSdrId }: ResumoMetas
         tipo: "closer",
         timeId: closer.time_id || null,
         timeNome: time?.nome,
-        metaVendas,
+        metaVendas: 0, // Closers don't have sales goal
         metaReceita,
         metaAgendamentos: 0,
         realizadoVendas,
         realizadoReceita,
         realizadoAgendamentos: 0,
-        progressoVendas,
+        progressoVendas: 0, // No sales goal tracking for closers
         progressoReceita,
         progressoAgendamentos: 0,
         status,
@@ -559,7 +557,7 @@ export function ResumoMetas({ teamFilter, userCloserId, userSdrId }: ResumoMetas
               <div className="space-y-4">
                 {sortedProgress.map((item, index) => {
                   const mainProgress = item.tipo === "closer" 
-                    ? Math.max(item.progressoVendas, item.progressoReceita)
+                    ? item.progressoReceita
                     : Math.max(item.progressoVendas, item.progressoAgendamentos);
                   
                   return (
@@ -608,9 +606,9 @@ export function ResumoMetas({ teamFilter, userCloserId, userSdrId }: ResumoMetas
                         {item.tipo === "closer" ? (
                           <>
                             <div className="flex justify-between">
-                              <span className="text-muted-foreground">Vendas:</span>
+                              <span className="text-muted-foreground">Vendas Realizadas:</span>
                               <span className="font-medium">
-                                {item.realizadoVendas} / {item.metaVendas}
+                                {item.realizadoVendas}
                               </span>
                             </div>
                             <div className="flex justify-between">
