@@ -6,44 +6,38 @@ interface StatusChartProps {
 }
 
 const STATUS_COLORS: Record<string, string> = {
-  "Vendas": "#22c55e",
+  "Venda Confirmada": "#22c55e",
+  "Venda Recorrente": "#16a34a",
+  "Venda": "#22c55e",
   "Pagamento agendado": "#eab308",
   "Em negociação": "#d2bc8f",
   "Não compareceu": "#ef4444",
+  "Não fechou": "#f97316",
   "Sem interesse": "#6b7280",
-  "Outros": "#374151",
+  "Sem dinheiro": "#9ca3af",
+  "Reembolsada": "#dc2626",
+  "Cancelado": "#b91c1c",
+  "Call Remarcada": "#8b5cf6",
+  "Sem qualificação": "#64748b",
+  "Não é prioridade": "#94a3b8",
+  "Quer apenas no futuro": "#a855f7",
 };
 
+const DEFAULT_COLOR = "#374151";
+
 export function StatusChart({ data }: StatusChartProps) {
-  // Agrupar por categoria de status
-  const statusGroups: Record<string, number> = {
-    "Vendas": 0,
-    "Pagamento agendado": 0,
-    "Em negociação": 0,
-    "Não compareceu": 0,
-    "Sem interesse": 0,
-    "Outros": 0,
-  };
+  // Contar cada status real individualmente
+  const statusCounts: Record<string, number> = {};
 
   data.forEach(item => {
-    if (item.status.includes("Venda") && !item.status.includes("Reembolsada")) {
-      statusGroups["Vendas"]++;
-    } else if (item.status === "Pagamento agendado") {
-      statusGroups["Pagamento agendado"]++;
-    } else if (item.status === "Em negociação") {
-      statusGroups["Em negociação"]++;
-    } else if (item.status === "Não compareceu") {
-      statusGroups["Não compareceu"]++;
-    } else if (item.status === "Sem interesse" || item.status === "Sem dinheiro") {
-      statusGroups["Sem interesse"]++;
-    } else {
-      statusGroups["Outros"]++;
-    }
+    const status = item.status;
+    statusCounts[status] = (statusCounts[status] || 0) + 1;
   });
 
-  const chartData = Object.entries(statusGroups)
+  const chartData = Object.entries(statusCounts)
     .filter(([_, value]) => value > 0)
-    .map(([name, value]) => ({ name, value }));
+    .map(([name, value]) => ({ name, value }))
+    .sort((a, b) => b.value - a.value);
 
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
@@ -73,7 +67,7 @@ export function StatusChart({ data }: StatusChartProps) {
             {chartData.map((entry, index) => (
               <Cell 
                 key={`cell-${index}`} 
-                fill={STATUS_COLORS[entry.name] || "#374151"}
+                fill={STATUS_COLORS[entry.name] || DEFAULT_COLOR}
                 stroke="hsl(220, 35%, 8%)"
                 strokeWidth={2}
               />
