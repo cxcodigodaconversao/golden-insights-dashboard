@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { Header } from "@/components/Dashboard/Header";
 import { PeriodFilter, PeriodType } from "@/components/Dashboard/PeriodFilter";
+import { TeamFilter } from "@/components/Dashboard/TeamFilter";
 import { DashboardContent } from "@/components/Dashboard/DashboardContent";
 import { AtendimentoForm } from "@/components/Dashboard/AtendimentoForm";
 import { GestaoClosers } from "@/components/Dashboard/GestaoClosers";
@@ -23,13 +24,14 @@ import { startOfMonth, endOfMonth, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 const Index = () => {
-  const { isAdmin } = useAuth();
+  const { isAdmin, isLider, isVendedor, isSdr, profile } = useAuth();
   const [periodType, setPeriodType] = useState<PeriodType>("custom");
   const [dateRange, setDateRange] = useState({
     start: startOfMonth(new Date()),
     end: endOfMonth(new Date()),
   });
   const [activeTab, setActiveTab] = useState("dashboard");
+  const [selectedTeam, setSelectedTeam] = useState<string | null>(null);
 
   const { data: atendimentos = [], isLoading: isLoadingAtendimentos } = useAtendimentos();
   const { data: closersData = [], isLoading: isLoadingClosers } = useClosers();
@@ -44,8 +46,81 @@ const Index = () => {
   const { data: allTimes = [] } = useTimes(true);
   const { data: allLideres = [] } = useLideres(true);
 
-  const closersList = useMemo(() => closersData.map(c => c.nome), [closersData]);
-  const sdrsList = useMemo(() => sdrsData.map(s => s.nome), [sdrsData]);
+  // Determine which team to use based on role
+  const effectiveTeamFilter = useMemo(() => {
+    // Admin and Lider can filter by team
+    if (isAdmin || isLider) {
+      // Lider can only see their own team
+      if (isLider && profile?.time_id) {
+        return profile.time_id;
+      }
+      return selectedTeam;
+    }
+    // Vendedor and SDR only see their team
+    if ((isVendedor || isSdr) && profile?.time_id) {
+      return profile.time_id;
+    }
+    return null;
+  }, [isAdmin, isLider, isVendedor, isSdr, profile, selectedTeam]);
+
+  // Filter closers and SDRs by team
+  const filteredClosers = useMemo(() => {
+    if (!effectiveTeamFilter) return allClosers;
+    return allClosers.filter(c => c.time_id === effectiveTeamFilter);
+  }, [allClosers, effectiveTeamFilter]);
+
+  const filteredSdrs = useMemo(() => {
+    if (!effectiveTeamFilter) return allSdrs;
+    return allSdrs.filter(s => s.time_id === effectiveTeamFilter);
+  }, [allSdrs, effectiveTeamFilter]);
+
+  // For Vendedor/SDR: only show their own data
+  const filteredAtendimentos = useMemo(() => {
+    let filtered = atendimentos;
+    
+    // Filter by team if applicable
+    if (effectiveTeamFilter) {
+      const teamCloserNames = filteredClosers.map(c => c.nome);
+      const teamSdrNames = filteredSdrs.map(s => s.nome);
+      filtered = filtered.filter(a => 
+        teamCloserNames.includes(a.closer) || teamSdrNames.includes(a.sdr)
+      );
+    }
+
+    // For vendedor: only their own closes
+    if (isVendedor && profile?.closer_id) {
+      const myCloser = allClosers.find(c => c.id === profile.closer_id);
+      if (myCloser) {
+        filtered = filtered.filter(a => a.closer === myCloser.nome);
+      }
+    }
+
+    // For SDR: only their own leads
+    if (isSdr && profile?.sdr_id) {
+      const mySdr = allSdrs.find(s => s.id === profile.sdr_id);
+      if (mySdr) {
+        filtered = filtered.filter(a => a.sdr === mySdr.nome);
+      }
+    }
+
+    return filtered;
+  }, [atendimentos, effectiveTeamFilter, filteredClosers, filteredSdrs, isVendedor, isSdr, profile, allClosers, allSdrs]);
+
+  const closersList = useMemo(() => {
+    if (isVendedor && profile?.closer_id) {
+      const myCloser = allClosers.find(c => c.id === profile.closer_id);
+      return myCloser ? [myCloser.nome] : [];
+    }
+    return filteredClosers.filter(c => c.ativo).map(c => c.nome);
+  }, [filteredClosers, isVendedor, profile, allClosers]);
+
+  const sdrsList = useMemo(() => {
+    if (isSdr && profile?.sdr_id) {
+      const mySdr = allSdrs.find(s => s.id === profile.sdr_id);
+      return mySdr ? [mySdr.nome] : [];
+    }
+    return filteredSdrs.filter(s => s.ativo).map(s => s.nome);
+  }, [filteredSdrs, isSdr, profile, allSdrs]);
 
   const handlePeriodChange = (start: Date, end: Date, type: PeriodType) => {
     setDateRange({ start, end });
@@ -54,6 +129,14 @@ const Index = () => {
 
   const isLoading = isLoadingAtendimentos || isLoadingClosers || isLoadingSdrs || isLoadingOrigens || isLoadingTimes || isLoadingLideres;
 
+  // Determine which tabs to show based on role
+  const canSeeDashboard = true;
+  const canSeeResumo = isAdmin || isLider;
+  const canSeeCadastrar = isAdmin || isLider;
+  const canSeeLancamentos = isAdmin || isLider;
+  const canSeeGestao = isAdmin;
+  const canSeeUsuarios = isAdmin;
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
@@ -61,52 +144,64 @@ const Index = () => {
       <main className="container py-8">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <TabsList className={`bg-secondary/50 p-1 h-auto grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 ${isAdmin ? 'lg:grid-cols-12' : 'lg:grid-cols-11'} gap-1 w-full`}>
+            <TabsList className="bg-secondary/50 p-1 h-auto flex flex-wrap gap-1 w-full lg:w-auto">
               <TabsTrigger value="dashboard" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2">
                 <LayoutDashboard className="h-4 w-4" />
                 Dashboard
               </TabsTrigger>
-              <TabsTrigger value="resumo" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2">
-                <Calendar className="h-4 w-4" />
-                Resumo
-              </TabsTrigger>
-              <TabsTrigger value="cadastrar" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2">
-                <PlusCircle className="h-4 w-4" />
-                Cadastrar
-              </TabsTrigger>
-              <TabsTrigger value="lancamentos-sdr" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2">
-                <FileSpreadsheet className="h-4 w-4" />
-                SDR
-              </TabsTrigger>
-              <TabsTrigger value="disparo" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2">
-                <Zap className="h-4 w-4" />
-                Disparo
-              </TabsTrigger>
-              <TabsTrigger value="trafego" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2">
-                <TrendingUp className="h-4 w-4" />
-                Tráfego
-              </TabsTrigger>
-              <TabsTrigger value="times" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2">
-                <Shield className="h-4 w-4" />
-                Times
-              </TabsTrigger>
-              <TabsTrigger value="lideres" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2">
-                <Crown className="h-4 w-4" />
-                Líderes
-              </TabsTrigger>
-              <TabsTrigger value="closers" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2">
-                <Users className="h-4 w-4" />
-                Closers
-              </TabsTrigger>
-              <TabsTrigger value="sdrs" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2">
-                <Headphones className="h-4 w-4" />
-                SDRs
-              </TabsTrigger>
-              <TabsTrigger value="origens" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2">
-                <Globe className="h-4 w-4" />
-                Origens
-              </TabsTrigger>
-              {isAdmin && (
+              {canSeeResumo && (
+                <TabsTrigger value="resumo" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2">
+                  <Calendar className="h-4 w-4" />
+                  Resumo
+                </TabsTrigger>
+              )}
+              {canSeeCadastrar && (
+                <TabsTrigger value="cadastrar" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2">
+                  <PlusCircle className="h-4 w-4" />
+                  Cadastrar
+                </TabsTrigger>
+              )}
+              {canSeeLancamentos && (
+                <>
+                  <TabsTrigger value="lancamentos-sdr" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2">
+                    <FileSpreadsheet className="h-4 w-4" />
+                    SDR
+                  </TabsTrigger>
+                  <TabsTrigger value="disparo" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2">
+                    <Zap className="h-4 w-4" />
+                    Disparo
+                  </TabsTrigger>
+                  <TabsTrigger value="trafego" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2">
+                    <TrendingUp className="h-4 w-4" />
+                    Tráfego
+                  </TabsTrigger>
+                </>
+              )}
+              {canSeeGestao && (
+                <>
+                  <TabsTrigger value="times" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2">
+                    <Shield className="h-4 w-4" />
+                    Times
+                  </TabsTrigger>
+                  <TabsTrigger value="lideres" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2">
+                    <Crown className="h-4 w-4" />
+                    Líderes
+                  </TabsTrigger>
+                  <TabsTrigger value="closers" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2">
+                    <Users className="h-4 w-4" />
+                    Closers
+                  </TabsTrigger>
+                  <TabsTrigger value="sdrs" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2">
+                    <Headphones className="h-4 w-4" />
+                    SDRs
+                  </TabsTrigger>
+                  <TabsTrigger value="origens" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2">
+                    <Globe className="h-4 w-4" />
+                    Origens
+                  </TabsTrigger>
+                </>
+              )}
+              {canSeeUsuarios && (
                 <TabsTrigger value="usuarios" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2">
                   <UserCog className="h-4 w-4" />
                   Usuários
@@ -114,16 +209,32 @@ const Index = () => {
               )}
             </TabsList>
             
-            <div className="flex gap-2">
-              <ImportExcel />
-              <ExportExcel />
+            <div className="flex gap-2 flex-wrap">
+              {isAdmin && (
+                <TeamFilter 
+                  times={allTimes} 
+                  selectedTeam={selectedTeam} 
+                  onTeamChange={setSelectedTeam} 
+                />
+              )}
+              {(isAdmin || isLider) && (
+                <>
+                  <ImportExcel />
+                  <ExportExcel />
+                </>
+              )}
             </div>
           </div>
 
           <TabsContent value="dashboard" className="space-y-6">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div className="opacity-0 animate-fade-in">
-                <h2 className="font-display text-3xl font-bold text-foreground">Dashboard de Resultados</h2>
+                <h2 className="font-display text-3xl font-bold text-foreground">
+                  {isVendedor && "Meus Resultados"}
+                  {isSdr && "Meus Resultados"}
+                  {(isAdmin || isLider) && "Dashboard de Resultados"}
+                  {!isVendedor && !isSdr && !isAdmin && !isLider && "Dashboard"}
+                </h2>
                 <p className="text-muted-foreground">
                   {format(dateRange.start, "dd 'de' MMMM", { locale: ptBR })} - {format(dateRange.end, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
                 </p>
@@ -131,98 +242,110 @@ const Index = () => {
               <PeriodFilter onPeriodChange={handlePeriodChange} currentPeriod={periodType} />
             </div>
             <DashboardContent 
-              atendimentos={atendimentos} 
+              atendimentos={filteredAtendimentos} 
               closersList={closersList} 
               sdrsList={sdrsList} 
               dateRange={dateRange} 
               isLoading={isLoading}
-              times={timesData}
-              closers={allClosers}
-              sdrs={allSdrs}
+              times={allTimes}
+              closers={filteredClosers}
+              sdrs={filteredSdrs}
             />
           </TabsContent>
 
-          <TabsContent value="resumo" className="space-y-6">
-            <div className="opacity-0 animate-fade-in">
-              <h2 className="font-display text-3xl font-bold text-foreground">Resumo Semanal</h2>
-              <p className="text-muted-foreground">Visão consolidada por período</p>
-            </div>
-            <ResumoSemanal />
-          </TabsContent>
+          {canSeeResumo && (
+            <TabsContent value="resumo" className="space-y-6">
+              <div className="opacity-0 animate-fade-in">
+                <h2 className="font-display text-3xl font-bold text-foreground">Resumo Semanal</h2>
+                <p className="text-muted-foreground">Visão consolidada por período</p>
+              </div>
+              <ResumoSemanal />
+            </TabsContent>
+          )}
 
-          <TabsContent value="cadastrar" className="space-y-6">
-            <div className="opacity-0 animate-fade-in">
-              <h2 className="font-display text-3xl font-bold text-foreground">Cadastrar Atendimento</h2>
-              <p className="text-muted-foreground">Registre um novo atendimento no sistema</p>
-            </div>
-            <AtendimentoForm closers={closersData} sdrs={sdrsData} origens={origensData} onSuccess={() => setActiveTab("dashboard")} />
-          </TabsContent>
+          {canSeeCadastrar && (
+            <TabsContent value="cadastrar" className="space-y-6">
+              <div className="opacity-0 animate-fade-in">
+                <h2 className="font-display text-3xl font-bold text-foreground">Cadastrar Atendimento</h2>
+                <p className="text-muted-foreground">Registre um novo atendimento no sistema</p>
+              </div>
+              <AtendimentoForm closers={closersData} sdrs={sdrsData} origens={origensData} onSuccess={() => setActiveTab("dashboard")} />
+            </TabsContent>
+          )}
 
-          <TabsContent value="lancamentos-sdr" className="space-y-6">
-            <div className="opacity-0 animate-fade-in">
-              <h2 className="font-display text-3xl font-bold text-foreground">Lançamentos SDR</h2>
-              <p className="text-muted-foreground">Registre as atividades diárias dos SDRs</p>
-            </div>
-            <LancamentoSDRPage />
-          </TabsContent>
+          {canSeeLancamentos && (
+            <>
+              <TabsContent value="lancamentos-sdr" className="space-y-6">
+                <div className="opacity-0 animate-fade-in">
+                  <h2 className="font-display text-3xl font-bold text-foreground">Lançamentos SDR</h2>
+                  <p className="text-muted-foreground">Registre as atividades diárias dos SDRs</p>
+                </div>
+                <LancamentoSDRPage />
+              </TabsContent>
 
-          <TabsContent value="disparo" className="space-y-6">
-            <div className="opacity-0 animate-fade-in">
-              <h2 className="font-display text-3xl font-bold text-foreground">Disparo (DC + Isca Digital)</h2>
-              <p className="text-muted-foreground">Lançamentos e vendas de disparo</p>
-            </div>
-            <LancamentoDisparoPage />
-          </TabsContent>
+              <TabsContent value="disparo" className="space-y-6">
+                <div className="opacity-0 animate-fade-in">
+                  <h2 className="font-display text-3xl font-bold text-foreground">Disparo (DC + Isca Digital)</h2>
+                  <p className="text-muted-foreground">Lançamentos e vendas de disparo</p>
+                </div>
+                <LancamentoDisparoPage />
+              </TabsContent>
 
-          <TabsContent value="trafego" className="space-y-6">
-            <div className="opacity-0 animate-fade-in">
-              <h2 className="font-display text-3xl font-bold text-foreground">Tráfego (SS + Mic + Wpp)</h2>
-              <p className="text-muted-foreground">Lançamentos e vendas de tráfego</p>
-            </div>
-            <LancamentoTrafegoPage />
-          </TabsContent>
+              <TabsContent value="trafego" className="space-y-6">
+                <div className="opacity-0 animate-fade-in">
+                  <h2 className="font-display text-3xl font-bold text-foreground">Tráfego (SS + Mic + Wpp)</h2>
+                  <p className="text-muted-foreground">Lançamentos e vendas de tráfego</p>
+                </div>
+                <LancamentoTrafegoPage />
+              </TabsContent>
+            </>
+          )}
 
-          <TabsContent value="times" className="space-y-6">
-            <div className="opacity-0 animate-fade-in">
-              <h2 className="font-display text-3xl font-bold text-foreground">Times</h2>
-              <p className="text-muted-foreground">Gerencie os times da equipe comercial</p>
-            </div>
-            <GestaoTimes times={allTimes} />
-          </TabsContent>
+          {canSeeGestao && (
+            <>
+              <TabsContent value="times" className="space-y-6">
+                <div className="opacity-0 animate-fade-in">
+                  <h2 className="font-display text-3xl font-bold text-foreground">Times</h2>
+                  <p className="text-muted-foreground">Gerencie os times da equipe comercial</p>
+                </div>
+                <GestaoTimes times={allTimes} />
+              </TabsContent>
 
-          <TabsContent value="lideres" className="space-y-6">
-            <div className="opacity-0 animate-fade-in">
-              <h2 className="font-display text-3xl font-bold text-foreground">Líderes Comerciais</h2>
-              <p className="text-muted-foreground">Gerencie os líderes de cada time</p>
-            </div>
-            <GestaoLideres lideres={allLideres} times={allTimes} />
-          </TabsContent>
+              <TabsContent value="lideres" className="space-y-6">
+                <div className="opacity-0 animate-fade-in">
+                  <h2 className="font-display text-3xl font-bold text-foreground">Líderes Comerciais</h2>
+                  <p className="text-muted-foreground">Gerencie os líderes de cada time</p>
+                </div>
+                <GestaoLideres lideres={allLideres} times={allTimes} />
+              </TabsContent>
 
-          <TabsContent value="closers" className="space-y-6">
-            <div className="opacity-0 animate-fade-in">
-              <h2 className="font-display text-3xl font-bold text-foreground">Closers</h2>
-              <p className="text-muted-foreground">Gerencie os closers da equipe</p>
-            </div>
-            <GestaoClosers closers={allClosers} times={allTimes} />
-          </TabsContent>
+              <TabsContent value="closers" className="space-y-6">
+                <div className="opacity-0 animate-fade-in">
+                  <h2 className="font-display text-3xl font-bold text-foreground">Closers</h2>
+                  <p className="text-muted-foreground">Gerencie os closers da equipe</p>
+                </div>
+                <GestaoClosers closers={allClosers} times={allTimes} />
+              </TabsContent>
 
-          <TabsContent value="sdrs" className="space-y-6">
-            <div className="opacity-0 animate-fade-in">
-              <h2 className="font-display text-3xl font-bold text-foreground">SDRs</h2>
-              <p className="text-muted-foreground">Gerencie os SDRs da equipe</p>
-            </div>
-            <GestaoSDRs sdrs={allSdrs} times={allTimes} />
-          </TabsContent>
+              <TabsContent value="sdrs" className="space-y-6">
+                <div className="opacity-0 animate-fade-in">
+                  <h2 className="font-display text-3xl font-bold text-foreground">SDRs</h2>
+                  <p className="text-muted-foreground">Gerencie os SDRs da equipe</p>
+                </div>
+                <GestaoSDRs sdrs={allSdrs} times={allTimes} />
+              </TabsContent>
 
-          <TabsContent value="origens" className="space-y-6">
-            <div className="opacity-0 animate-fade-in">
-              <h2 className="font-display text-3xl font-bold text-foreground">Origens</h2>
-              <p className="text-muted-foreground">Gerencie as origens de leads</p>
-            </div>
-            <GestaoOrigens origens={allOrigens} />
-          </TabsContent>
+              <TabsContent value="origens" className="space-y-6">
+                <div className="opacity-0 animate-fade-in">
+                  <h2 className="font-display text-3xl font-bold text-foreground">Origens</h2>
+                  <p className="text-muted-foreground">Gerencie as origens de leads</p>
+                </div>
+                <GestaoOrigens origens={allOrigens} />
+              </TabsContent>
+            </>
+          )}
 
-          {isAdmin && (
+          {canSeeUsuarios && (
             <TabsContent value="usuarios" className="space-y-6">
               <div className="opacity-0 animate-fade-in">
                 <h2 className="font-display text-3xl font-bold text-foreground">Usuários</h2>

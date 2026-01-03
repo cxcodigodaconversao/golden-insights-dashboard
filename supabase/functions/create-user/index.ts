@@ -55,13 +55,48 @@ Deno.serve(async (req) => {
     if (roleError || roleData?.role !== 'admin') {
       console.log('User is not admin:', roleError);
       return new Response(
-        JSON.stringify({ error: 'Apenas administradores podem criar usuários' }),
+        JSON.stringify({ error: 'Apenas administradores podem gerenciar usuários' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
     // Get request body
-    const { email, password, nome, isAdmin } = await req.json();
+    const body = await req.json();
+    const { action } = body;
+
+    // Handle delete action
+    if (action === 'delete') {
+      const { userId } = body;
+      
+      if (!userId) {
+        return new Response(
+          JSON.stringify({ error: 'ID do usuário é obrigatório' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      console.log(`Deleting user: ${userId}`);
+
+      const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(userId);
+
+      if (deleteError) {
+        console.log('Error deleting user:', deleteError);
+        return new Response(
+          JSON.stringify({ error: deleteError.message }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      console.log('User deleted successfully');
+
+      return new Response(
+        JSON.stringify({ success: true }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Handle create action (default)
+    const { email, password, nome, role = 'user', time_id, closer_id, sdr_id } = body;
 
     if (!email || !password || !nome) {
       return new Response(
@@ -70,7 +105,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log(`Creating user: ${email}, nome: ${nome}, isAdmin: ${isAdmin}`);
+    console.log(`Creating user: ${email}, nome: ${nome}, role: ${role}`);
 
     // Create the user using admin API
     const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
@@ -89,15 +124,32 @@ Deno.serve(async (req) => {
     }
 
     // The trigger will create the profile and assign user role automatically
-    // If isAdmin is true, we need to update the role
-    if (isAdmin && newUser.user) {
+    // Update profile with additional fields
+    if (newUser.user && (time_id || closer_id || sdr_id)) {
+      const updateData: Record<string, string | null> = {};
+      if (time_id) updateData.time_id = time_id;
+      if (closer_id) updateData.closer_id = closer_id;
+      if (sdr_id) updateData.sdr_id = sdr_id;
+
+      const { error: profileUpdateError } = await supabaseAdmin
+        .from('profiles')
+        .update(updateData)
+        .eq('id', newUser.user.id);
+
+      if (profileUpdateError) {
+        console.log('Error updating profile:', profileUpdateError);
+      }
+    }
+
+    // Update role if not 'user'
+    if (role !== 'user' && newUser.user) {
       const { error: updateRoleError } = await supabaseAdmin
         .from('user_roles')
-        .update({ role: 'admin' })
+        .update({ role })
         .eq('user_id', newUser.user.id);
 
       if (updateRoleError) {
-        console.log('Error updating role to admin:', updateRoleError);
+        console.log('Error updating role:', updateRoleError);
       }
     }
 

@@ -3,12 +3,18 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { UserPlus, Loader2, Shield, User, RefreshCw } from "lucide-react";
+import { useAuditLog } from "@/hooks/useAuditLog";
+import { useTimes, useClosers, useSdrs } from "@/hooks/useAtendimentos";
+import { UserPlus, Loader2, Shield, User, RefreshCw, Crown, Headphones, Trash2 } from "lucide-react";
+import { AuditLogViewer } from "./AuditLogViewer";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
+type AppRole = 'admin' | 'lider' | 'vendedor' | 'sdr' | 'user';
 
 interface Profile {
   id: string;
@@ -16,19 +22,30 @@ interface Profile {
   email: string;
   ativo: boolean;
   created_at: string;
-}
-
-interface UserRole {
-  user_id: string;
-  role: 'admin' | 'user';
+  closer_id: string | null;
+  sdr_id: string | null;
+  time_id: string | null;
 }
 
 interface UserWithRole extends Profile {
-  role: 'admin' | 'user';
+  role: AppRole;
 }
+
+const roleConfig: Record<AppRole, { label: string; icon: typeof Shield; color: string }> = {
+  admin: { label: 'Admin', icon: Shield, color: 'bg-purple-600' },
+  lider: { label: 'Líder', icon: Crown, color: 'bg-blue-600' },
+  vendedor: { label: 'Vendedor', icon: User, color: 'bg-green-600' },
+  sdr: { label: 'SDR', icon: Headphones, color: 'bg-orange-600' },
+  user: { label: 'Usuário', icon: User, color: 'bg-gray-600' },
+};
 
 export function GestaoUsuarios() {
   const { toast } = useToast();
+  const { logAction } = useAuditLog();
+  const { data: times = [] } = useTimes(true);
+  const { data: closers = [] } = useClosers(true);
+  const { data: sdrs = [] } = useSdrs(true);
+  
   const [users, setUsers] = useState<UserWithRole[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -38,7 +55,10 @@ export function GestaoUsuarios() {
     nome: "",
     email: "",
     password: "",
-    isAdmin: false,
+    role: "user" as AppRole,
+    time_id: "",
+    closer_id: "",
+    sdr_id: "",
   });
 
   const fetchUsers = async () => {
@@ -61,7 +81,7 @@ export function GestaoUsuarios() {
         const userRole = (roles || []).find((r) => r.user_id === profile.id);
         return {
           ...profile,
-          role: (userRole?.role as 'admin' | 'user') || 'user',
+          role: (userRole?.role as AppRole) || 'user',
         };
       });
 
@@ -92,7 +112,10 @@ export function GestaoUsuarios() {
           email: formData.email,
           password: formData.password,
           nome: formData.nome,
-          isAdmin: formData.isAdmin,
+          role: formData.role,
+          time_id: formData.time_id || null,
+          closer_id: formData.closer_id || null,
+          sdr_id: formData.sdr_id || null,
         },
       });
 
@@ -104,18 +127,26 @@ export function GestaoUsuarios() {
         throw new Error(response.data.error);
       }
 
+      await logAction({
+        action: 'create',
+        tableName: 'profiles',
+        recordId: response.data?.user?.id,
+        newData: { nome: formData.nome, email: formData.email, role: formData.role },
+      });
+
       toast({
         title: "Usuário criado!",
         description: `${formData.nome} foi adicionado com sucesso.`,
       });
 
-      setFormData({ nome: "", email: "", password: "", isAdmin: false });
+      setFormData({ nome: "", email: "", password: "", role: "user", time_id: "", closer_id: "", sdr_id: "" });
       setIsDialogOpen(false);
       fetchUsers();
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "Ocorreu um erro inesperado.";
       toast({
         title: "Erro ao criar usuário",
-        description: error.message || "Ocorreu um erro inesperado.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -123,7 +154,7 @@ export function GestaoUsuarios() {
     }
   };
 
-  const toggleUserStatus = async (userId: string, currentStatus: boolean) => {
+  const toggleUserStatus = async (userId: string, currentStatus: boolean, userName: string) => {
     try {
       const { error } = await supabase
         .from('profiles')
@@ -131,6 +162,14 @@ export function GestaoUsuarios() {
         .eq('id', userId);
 
       if (error) throw error;
+
+      await logAction({
+        action: 'update',
+        tableName: 'profiles',
+        recordId: userId,
+        oldData: { ativo: currentStatus, nome: userName },
+        newData: { ativo: !currentStatus, nome: userName },
+      });
 
       toast({
         title: currentStatus ? "Usuário desativado" : "Usuário ativado",
@@ -146,9 +185,7 @@ export function GestaoUsuarios() {
     }
   };
 
-  const toggleUserRole = async (userId: string, currentRole: 'admin' | 'user') => {
-    const newRole = currentRole === 'admin' ? 'user' : 'admin';
-    
+  const updateUserRole = async (userId: string, newRole: AppRole, userName: string, currentRole: AppRole) => {
     try {
       const { error } = await supabase
         .from('user_roles')
@@ -157,8 +194,16 @@ export function GestaoUsuarios() {
 
       if (error) throw error;
 
+      await logAction({
+        action: 'update',
+        tableName: 'user_roles',
+        recordId: userId,
+        oldData: { role: currentRole, nome: userName },
+        newData: { role: newRole, nome: userName },
+      });
+
       toast({
-        title: `Permissão alterada para ${newRole === 'admin' ? 'Administrador' : 'Usuário'}`,
+        title: `Permissão alterada para ${roleConfig[newRole].label}`,
       });
 
       fetchUsers();
@@ -171,157 +216,279 @@ export function GestaoUsuarios() {
     }
   };
 
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-lg font-semibold">Usuários do Sistema</h3>
-          <p className="text-sm text-muted-foreground">
-            Gerencie os usuários que têm acesso ao dashboard
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={fetchUsers} disabled={isLoading}>
-            <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-            Atualizar
-          </Button>
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button size="sm">
-                <UserPlus className="h-4 w-4 mr-2" />
-                Novo Usuário
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Adicionar Novo Usuário</DialogTitle>
-              </DialogHeader>
-              <form onSubmit={handleCreateUser} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="nome">Nome</Label>
-                  <Input
-                    id="nome"
-                    value={formData.nome}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, nome: e.target.value }))}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="password">Senha Temporária</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    value={formData.password}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, password: e.target.value }))}
-                    required
-                    minLength={6}
-                  />
-                </div>
-                <div className="flex items-center gap-3">
-                  <Switch
-                    id="isAdmin"
-                    checked={formData.isAdmin}
-                    onCheckedChange={(checked) => setFormData((prev) => ({ ...prev, isAdmin: checked }))}
-                  />
-                  <Label htmlFor="isAdmin">É administrador?</Label>
-                </div>
-                <Button type="submit" className="w-full" disabled={isSubmitting}>
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Criando...
-                    </>
-                  ) : (
-                    'Criar Usuário'
-                  )}
-                </Button>
-              </form>
-            </DialogContent>
-          </Dialog>
-        </div>
-      </div>
+  const deleteUser = async (userId: string, userName: string) => {
+    if (!confirm(`Tem certeza que deseja excluir ${userName}? Esta ação não pode ser desfeita.`)) {
+      return;
+    }
 
-      {isLoading ? (
-        <div className="flex items-center justify-center py-8">
-          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+    try {
+      const response = await supabase.functions.invoke('create-user', {
+        body: { action: 'delete', userId },
+      });
+
+      if (response.error) throw new Error(response.error.message);
+      if (response.data?.error) throw new Error(response.data.error);
+
+      await logAction({
+        action: 'delete',
+        tableName: 'profiles',
+        recordId: userId,
+        oldData: { nome: userName },
+      });
+
+      toast({ title: "Usuário excluído" });
+      fetchUsers();
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "Ocorreu um erro inesperado.";
+      toast({
+        title: "Erro ao excluir",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const getRoleBadge = (role: AppRole) => {
+    const config = roleConfig[role] || roleConfig.user;
+    const Icon = config.icon;
+    return (
+      <Badge variant="outline" className={`${config.color} text-white border-0 gap-1`}>
+        <Icon className="h-3 w-3" />
+        {config.label}
+      </Badge>
+    );
+  };
+
+  return (
+    <Tabs defaultValue="users" className="space-y-6">
+      <TabsList>
+        <TabsTrigger value="users">Usuários</TabsTrigger>
+        <TabsTrigger value="audit">Histórico de Alterações</TabsTrigger>
+      </TabsList>
+
+      <TabsContent value="users" className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-lg font-semibold">Usuários do Sistema</h3>
+            <p className="text-sm text-muted-foreground">
+              Gerencie os usuários e suas permissões
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={fetchUsers} disabled={isLoading}>
+              <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+              Atualizar
+            </Button>
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+              <DialogTrigger asChild>
+                <Button size="sm">
+                  <UserPlus className="h-4 w-4 mr-2" />
+                  Novo Usuário
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Adicionar Novo Usuário</DialogTitle>
+                </DialogHeader>
+                <form onSubmit={handleCreateUser} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="nome">Nome</Label>
+                    <Input
+                      id="nome"
+                      value={formData.nome}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, nome: e.target.value }))}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Email</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      value={formData.email}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="password">Senha Temporária</Label>
+                    <Input
+                      id="password"
+                      type="password"
+                      value={formData.password}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, password: e.target.value }))}
+                      required
+                      minLength={6}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Perfil</Label>
+                    <Select
+                      value={formData.role}
+                      onValueChange={(value: AppRole) => setFormData((prev) => ({ ...prev, role: value }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="admin">Administrador</SelectItem>
+                        <SelectItem value="lider">Líder</SelectItem>
+                        <SelectItem value="vendedor">Vendedor</SelectItem>
+                        <SelectItem value="sdr">SDR</SelectItem>
+                        <SelectItem value="user">Usuário</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Time</Label>
+                    <Select
+                      value={formData.time_id}
+                      onValueChange={(value) => setFormData((prev) => ({ ...prev, time_id: value }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione um time" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">Nenhum</SelectItem>
+                        {times.filter(t => t.ativo).map((time) => (
+                          <SelectItem key={time.id} value={time.id}>{time.nome}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {(formData.role === 'vendedor') && (
+                    <div className="space-y-2">
+                      <Label>Vincular a Closer</Label>
+                      <Select
+                        value={formData.closer_id}
+                        onValueChange={(value) => setFormData((prev) => ({ ...prev, closer_id: value }))}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione um closer" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="">Nenhum</SelectItem>
+                          {closers.filter(c => c.ativo).map((closer) => (
+                            <SelectItem key={closer.id} value={closer.id}>{closer.nome}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                  {(formData.role === 'sdr') && (
+                    <div className="space-y-2">
+                      <Label>Vincular a SDR</Label>
+                      <Select
+                        value={formData.sdr_id}
+                        onValueChange={(value) => setFormData((prev) => ({ ...prev, sdr_id: value }))}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione um SDR" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="">Nenhum</SelectItem>
+                          {sdrs.filter(s => s.ativo).map((sdr) => (
+                            <SelectItem key={sdr.id} value={sdr.id}>{sdr.nome}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                  <Button type="submit" className="w-full" disabled={isSubmitting}>
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Criando...
+                      </>
+                    ) : (
+                      'Criar Usuário'
+                    )}
+                  </Button>
+                </form>
+              </DialogContent>
+            </Dialog>
+          </div>
         </div>
-      ) : (
-        <div className="rounded-lg border border-border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Nome</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Permissão</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {users.length === 0 ? (
+
+        {isLoading ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          </div>
+        ) : (
+          <div className="rounded-lg border border-border overflow-x-auto">
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
-                    Nenhum usuário cadastrado
-                  </TableCell>
+                  <TableHead>Nome</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Perfil</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
-              ) : (
-                users.map((user) => (
-                  <TableRow key={user.id}>
-                    <TableCell className="font-medium">{user.nome}</TableCell>
-                    <TableCell>{user.email}</TableCell>
-                    <TableCell>
-                      <Badge variant={user.role === 'admin' ? 'default' : 'secondary'}>
-                        {user.role === 'admin' ? (
-                          <>
-                            <Shield className="h-3 w-3 mr-1" />
-                            Admin
-                          </>
-                        ) : (
-                          <>
-                            <User className="h-3 w-3 mr-1" />
-                            Usuário
-                          </>
-                        )}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={user.ativo ? 'outline' : 'destructive'}>
-                        {user.ativo ? 'Ativo' : 'Inativo'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right space-x-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => toggleUserRole(user.id, user.role)}
-                      >
-                        {user.role === 'admin' ? 'Remover Admin' : 'Tornar Admin'}
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => toggleUserStatus(user.id, user.ativo)}
-                      >
-                        {user.ativo ? 'Desativar' : 'Ativar'}
-                      </Button>
+              </TableHeader>
+              <TableBody>
+                {users.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                      Nenhum usuário cadastrado
                     </TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
-      )}
-    </div>
+                ) : (
+                  users.map((user) => (
+                    <TableRow key={user.id}>
+                      <TableCell className="font-medium">{user.nome}</TableCell>
+                      <TableCell>{user.email}</TableCell>
+                      <TableCell>
+                        <Select
+                          value={user.role}
+                          onValueChange={(value: AppRole) => updateUserRole(user.id, value, user.nome, user.role)}
+                        >
+                          <SelectTrigger className="w-[140px] h-8">
+                            <SelectValue>{getRoleBadge(user.role)}</SelectValue>
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="admin">Administrador</SelectItem>
+                            <SelectItem value="lider">Líder</SelectItem>
+                            <SelectItem value="vendedor">Vendedor</SelectItem>
+                            <SelectItem value="sdr">SDR</SelectItem>
+                            <SelectItem value="user">Usuário</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={user.ativo ? 'outline' : 'destructive'}>
+                          {user.ativo ? 'Ativo' : 'Inativo'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right space-x-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => toggleUserStatus(user.id, user.ativo, user.nome)}
+                        >
+                          {user.ativo ? 'Desativar' : 'Ativar'}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-destructive hover:text-destructive"
+                          onClick={() => deleteUser(user.id, user.nome)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+      </TabsContent>
+
+      <TabsContent value="audit">
+        <AuditLogViewer />
+      </TabsContent>
+    </Tabs>
   );
 }
