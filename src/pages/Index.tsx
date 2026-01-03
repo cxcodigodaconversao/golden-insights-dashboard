@@ -10,6 +10,8 @@ import { GestaoOrigens } from "@/components/Dashboard/GestaoOrigens";
 import { GestaoTimes } from "@/components/Dashboard/GestaoTimes";
 import { GestaoLideres } from "@/components/Dashboard/GestaoLideres";
 import { GestaoUsuarios } from "@/components/Dashboard/GestaoUsuarios";
+import { GestaoMetas } from "@/components/Dashboard/GestaoMetas";
+import { GestaoNotificacoes } from "@/components/Dashboard/GestaoNotificacoes";
 import { LancamentoSDRPage } from "@/components/Dashboard/LancamentoSDRPage";
 import { LancamentoDisparoPage } from "@/components/Dashboard/LancamentoDisparoPage";
 import { LancamentoTrafegoPage } from "@/components/Dashboard/LancamentoTrafegoPage";
@@ -19,7 +21,7 @@ import { ExportExcel } from "@/components/Dashboard/ExportExcel";
 import { useAtendimentos, useClosers, useSdrs, useOrigens, useTimes, useLideres } from "@/hooks/useAtendimentos";
 import { useAuth } from "@/hooks/useAuth";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { LayoutDashboard, PlusCircle, Users, Headphones, Globe, FileSpreadsheet, Zap, TrendingUp, Calendar, Shield, Crown, UserCog } from "lucide-react";
+import { LayoutDashboard, PlusCircle, Users, Headphones, Globe, FileSpreadsheet, Zap, TrendingUp, Calendar, Shield, Crown, UserCog, Target, Bell } from "lucide-react";
 import { startOfMonth, endOfMonth, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -129,11 +131,12 @@ const Index = () => {
 
   const isLoading = isLoadingAtendimentos || isLoadingClosers || isLoadingSdrs || isLoadingOrigens || isLoadingTimes || isLoadingLideres;
 
-  // Determine which tabs to show based on role
   const canSeeDashboard = true;
   const canSeeResumo = isAdmin || isLider;
   const canSeeCadastrar = isAdmin || isLider;
   const canSeeLancamentos = isAdmin || isLider;
+  const canSeeMetas = isAdmin || isLider;
+  const canSeeNotificacoes = isAdmin;
   const canSeeGestao = isAdmin;
   const canSeeUsuarios = isAdmin;
 
@@ -200,6 +203,18 @@ const Index = () => {
                     Origens
                   </TabsTrigger>
                 </>
+              )}
+              {canSeeMetas && (
+                <TabsTrigger value="metas" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2">
+                  <Target className="h-4 w-4" />
+                  Metas
+                </TabsTrigger>
+              )}
+              {canSeeNotificacoes && (
+                <TabsTrigger value="notificacoes" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2">
+                  <Bell className="h-4 w-4" />
+                  Notificações
+                </TabsTrigger>
               )}
               {canSeeUsuarios && (
                 <TabsTrigger value="usuarios" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2">
@@ -343,6 +358,26 @@ const Index = () => {
                 <GestaoOrigens origens={allOrigens} />
               </TabsContent>
             </>
+          )}
+
+          {canSeeMetas && (
+            <TabsContent value="metas" className="space-y-6">
+              <div className="opacity-0 animate-fade-in">
+                <h2 className="font-display text-3xl font-bold text-foreground">Metas Mensais</h2>
+                <p className="text-muted-foreground">Defina e acompanhe as metas de cada closer e SDR</p>
+              </div>
+              <GestaoMetas times={allTimes} />
+            </TabsContent>
+          )}
+
+          {canSeeNotificacoes && (
+            <TabsContent value="notificacoes" className="space-y-6">
+              <div className="opacity-0 animate-fade-in">
+                <h2 className="font-display text-3xl font-bold text-foreground">Notificações</h2>
+                <p className="text-muted-foreground">Configure alertas por email para metas e performance</p>
+              </div>
+              <GestaoNotificacoes />
+            </TabsContent>
           )}
 
           {canSeeUsuarios && (

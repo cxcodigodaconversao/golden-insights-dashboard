@@ -1,6 +1,9 @@
 import { useMemo } from "react";
 import { Atendimento } from "@/hooks/useAtendimentos";
 import { Users } from "lucide-react";
+import { MetasProgressBar } from "./MetasProgressBar";
+import { useMetas } from "@/hooks/useMetas";
+import { format, startOfMonth } from "date-fns";
 
 interface Time {
   id: string;
@@ -33,6 +36,9 @@ interface SDRRankingProps {
 }
 
 export function SDRRanking({ data, sdrsList, times = [], sdrs = [] }: SDRRankingProps) {
+  const currentMonth = format(startOfMonth(new Date()), "yyyy-MM-dd");
+  const { data: metas = [] } = useMetas(currentMonth);
+
   const ranking = useMemo(() => {
     const sdrMap: Record<string, SDRStats> = {};
 
@@ -72,6 +78,15 @@ export function SDRRanking({ data, sdrsList, times = [], sdrs = [] }: SDRRanking
     return times.find(t => t.id === sdr.time_id);
   };
 
+  const getSdrId = (sdrNome: string) => {
+    return sdrs.find(s => s.nome === sdrNome)?.id;
+  };
+
+  const getMetaForSDR = (sdrId: string | undefined) => {
+    if (!sdrId) return null;
+    return metas.find(m => m.tipo === "sdr" && m.referencia_id === sdrId);
+  };
+
   if (ranking.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-8 text-center">
@@ -85,37 +100,60 @@ export function SDRRanking({ data, sdrsList, times = [], sdrs = [] }: SDRRanking
     <div className="space-y-3">
       {ranking.map((sdr, index) => {
         const team = getTeamForSDR(sdr.nome);
+        const sdrId = getSdrId(sdr.nome);
+        const meta = getMetaForSDR(sdrId);
         
         return (
           <div
             key={sdr.nome}
-            className="flex items-center gap-4 rounded-lg border border-border bg-secondary/50 p-3 transition-colors hover:bg-secondary"
+            className="flex flex-col gap-3 rounded-lg border border-border bg-secondary/50 p-3 transition-colors hover:bg-secondary"
           >
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/20 text-sm font-semibold text-primary">
-              {index + 1}
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="font-medium text-foreground truncate">{sdr.nome}</p>
-              <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
-                {team && (
-                  <span 
-                    className="inline-flex items-center rounded px-1.5 py-0.5 text-xs font-medium"
-                    style={{ 
-                      backgroundColor: `${team.cor}20`, 
-                      color: team.cor || 'hsl(var(--muted-foreground))' 
-                    }}
-                  >
-                    {team.nome}
-                  </span>
-                )}
-                <span>{sdr.agendamentos} agendados</span>
-                <span>{sdr.taxaComparecimento.toFixed(0)}% comp.</span>
+            <div className="flex items-center gap-4">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/20 text-sm font-semibold text-primary">
+                {index + 1}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-medium text-foreground truncate">{sdr.nome}</p>
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+                  {team && (
+                    <span 
+                      className="inline-flex items-center rounded px-1.5 py-0.5 text-xs font-medium"
+                      style={{ 
+                        backgroundColor: `${team.cor}20`, 
+                        color: team.cor || 'hsl(var(--muted-foreground))' 
+                      }}
+                    >
+                      {team.nome}
+                    </span>
+                  )}
+                  <span>{sdr.agendamentos} agendados</span>
+                  <span>{sdr.taxaComparecimento.toFixed(0)}% comp.</span>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className="font-semibold text-primary">{sdr.vendas} vendas</p>
+                <p className="text-xs text-muted-foreground">{formatCurrency(sdr.receita)}</p>
               </div>
             </div>
-            <div className="text-right">
-              <p className="font-semibold text-primary">{sdr.vendas} vendas</p>
-              <p className="text-xs text-muted-foreground">{formatCurrency(sdr.receita)}</p>
-            </div>
+
+            {meta && (meta.meta_agendamentos > 0 || meta.meta_vendas > 0) && (
+              <div className="grid gap-2 pt-2 border-t border-border/50 md:grid-cols-2">
+                {meta.meta_agendamentos > 0 && (
+                  <MetasProgressBar
+                    atual={sdr.agendamentos}
+                    meta={meta.meta_agendamentos}
+                    label="Meta Agendamentos"
+                  />
+                )}
+                {meta.meta_vendas > 0 && (
+                  <MetasProgressBar
+                    atual={sdr.vendas}
+                    meta={meta.meta_vendas}
+                    label="Meta Vendas"
+                  />
+                )}
+              </div>
+            )}
           </div>
         );
       })}
