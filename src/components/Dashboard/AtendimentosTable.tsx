@@ -11,13 +11,16 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Search, Filter, Pencil, Trash2, CalendarIcon } from "lucide-react";
+import { Search, Filter, Pencil, Trash2, CalendarIcon, History } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { useFindOrCreateLead, useAddHistoricoInteracao, useUpdateAtendimentoLeadId } from "@/hooks/useLeads";
+import { LeadHistorico } from "./LeadHistorico";
 
 interface AtendimentosTableProps {
   data: Atendimento[];
@@ -40,8 +43,18 @@ export function AtendimentosTable({ data }: AtendimentosTableProps) {
   const [closerFilter, setCloserFilter] = useState<string>("all");
   
   const [editingItem, setEditingItem] = useState<Atendimento | null>(null);
+  const [originalStatus, setOriginalStatus] = useState<string>("");
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Estado para histórico do lead
+  const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
+  const [isHistoricoOpen, setIsHistoricoOpen] = useState(false);
+
+  // Hooks para leads
+  const findOrCreateLead = useFindOrCreateLead();
+  const addHistoricoInteracao = useAddHistoricoInteracao();
+  const updateAtendimentoLeadId = useUpdateAtendimentoLeadId();
 
   const { data: closersData = [] } = useClosers();
   const { data: origensData = [] } = useOrigens();
@@ -90,7 +103,50 @@ export function AtendimentosTable({ data }: AtendimentosTableProps) {
 
   const handleEdit = (item: Atendimento) => {
     setEditingItem({ ...item });
+    setOriginalStatus(item.status);
     setIsEditDialogOpen(true);
+  };
+
+  const handleViewHistorico = async (item: Atendimento) => {
+    // Se o atendimento já tem lead_id, abre direto
+    if (item.lead_id) {
+      setSelectedLeadId(item.lead_id);
+      setIsHistoricoOpen(true);
+      return;
+    }
+
+    // Caso contrário, busca ou cria o lead
+    try {
+      const lead = await findOrCreateLead.mutateAsync({
+        nome: item.nome,
+        telefone: item.telefone,
+        email: item.email,
+        origem: item.origem,
+        sdr: item.sdr,
+      });
+
+      // Atualiza o atendimento com o lead_id
+      await updateAtendimentoLeadId.mutateAsync({
+        atendimentoId: item.id,
+        leadId: lead.id,
+      });
+
+      // Registra a interação inicial
+      await addHistoricoInteracao.mutateAsync({
+        lead_id: lead.id,
+        atendimento_id: item.id,
+        tipo: "agendamento",
+        descricao: `Atendimento agendado com closer ${item.closer}`,
+        status_novo: item.status,
+        usuario_nome: item.sdr,
+      });
+
+      setSelectedLeadId(lead.id);
+      setIsHistoricoOpen(true);
+    } catch (error) {
+      console.error("Erro ao buscar histórico:", error);
+      toast.error("Erro ao carregar histórico do lead");
+    }
   };
 
   const handleSaveEdit = async () => {
@@ -98,6 +154,8 @@ export function AtendimentosTable({ data }: AtendimentosTableProps) {
     
     setIsSubmitting(true);
     try {
+      const statusChanged = originalStatus !== editingItem.status;
+
       const { error } = await supabase
         .from("atendimentos")
         .update({
@@ -116,6 +174,33 @@ export function AtendimentosTable({ data }: AtendimentosTableProps) {
         .eq("id", editingItem.id);
 
       if (error) throw error;
+
+      // Se o status mudou, registra no histórico
+      if (statusChanged && editingItem.lead_id) {
+        let tipo = "status_change";
+        let descricao = `Status alterado de "${originalStatus}" para "${editingItem.status}"`;
+        
+        if (editingItem.status === "Não compareceu") {
+          tipo = "no_show";
+          descricao = "Cliente não compareceu à call";
+        } else if (editingItem.status.includes("Venda")) {
+          tipo = "venda";
+          descricao = `Venda realizada - ${editingItem.status}`;
+        } else if (["Não fechou", "Sem interesse", "Sem dinheiro"].includes(editingItem.status)) {
+          tipo = "perda";
+          descricao = `Venda perdida - ${editingItem.status}`;
+        }
+
+        await addHistoricoInteracao.mutateAsync({
+          lead_id: editingItem.lead_id,
+          atendimento_id: editingItem.id,
+          tipo,
+          descricao,
+          status_anterior: originalStatus,
+          status_novo: editingItem.status,
+          usuario_nome: editingItem.closer,
+        });
+      }
 
       toast.success("Atendimento atualizado com sucesso!");
       queryClient.invalidateQueries({ queryKey: ["atendimentos"] });
@@ -255,6 +340,23 @@ export function AtendimentosTable({ data }: AtendimentosTableProps) {
                   </TableCell>
                   <TableCell>
                     <div className="flex justify-center gap-1">
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleViewHistorico(item)}
+                              className="hover:bg-secondary"
+                            >
+                              <History className="h-4 w-4 text-purple-500" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Ver histórico do lead</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                       <Button
                         variant="ghost"
                         size="sm"
@@ -454,6 +556,13 @@ export function AtendimentosTable({ data }: AtendimentosTableProps) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Modal de Histórico do Lead */}
+      <LeadHistorico 
+        leadId={selectedLeadId} 
+        open={isHistoricoOpen} 
+        onOpenChange={setIsHistoricoOpen} 
+      />
     </div>
   );
 }

@@ -23,6 +23,7 @@ export type Database = {
           gravacao: string | null
           id: string
           info_sdr: string | null
+          lead_id: string | null
           nome: string
           origem: string
           sdr: string
@@ -39,6 +40,7 @@ export type Database = {
           gravacao?: string | null
           id?: string
           info_sdr?: string | null
+          lead_id?: string | null
           nome: string
           origem: string
           sdr: string
@@ -55,6 +57,7 @@ export type Database = {
           gravacao?: string | null
           id?: string
           info_sdr?: string | null
+          lead_id?: string | null
           nome?: string
           origem?: string
           sdr?: string
@@ -63,7 +66,15 @@ export type Database = {
           updated_at?: string
           valor?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "atendimentos_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       audit_logs: {
         Row: {
@@ -135,6 +146,60 @@ export type Database = {
             columns: ["time_id"]
             isOneToOne: false
             referencedRelation: "times"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      historico_interacoes: {
+        Row: {
+          atendimento_id: string | null
+          created_at: string | null
+          data_interacao: string | null
+          descricao: string | null
+          id: string
+          lead_id: string
+          status_anterior: string | null
+          status_novo: string | null
+          tipo: string
+          usuario_nome: string | null
+        }
+        Insert: {
+          atendimento_id?: string | null
+          created_at?: string | null
+          data_interacao?: string | null
+          descricao?: string | null
+          id?: string
+          lead_id: string
+          status_anterior?: string | null
+          status_novo?: string | null
+          tipo: string
+          usuario_nome?: string | null
+        }
+        Update: {
+          atendimento_id?: string | null
+          created_at?: string | null
+          data_interacao?: string | null
+          descricao?: string | null
+          id?: string
+          lead_id?: string
+          status_anterior?: string | null
+          status_novo?: string | null
+          tipo?: string
+          usuario_nome?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "historico_interacoes_atendimento_id_fkey"
+            columns: ["atendimento_id"]
+            isOneToOne: false
+            referencedRelation: "atendimentos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "historico_interacoes_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
             referencedColumns: ["id"]
           },
         ]
@@ -291,6 +356,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      leads: {
+        Row: {
+          created_at: string | null
+          email: string | null
+          id: string
+          nome: string
+          origem_primeira: string | null
+          sdr_primeiro: string | null
+          telefone: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          nome: string
+          origem_primeira?: string | null
+          sdr_primeiro?: string | null
+          telefone?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          nome?: string
+          origem_primeira?: string | null
+          sdr_primeiro?: string | null
+          telefone?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       lideres_comerciais: {
         Row: {
