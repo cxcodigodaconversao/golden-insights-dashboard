@@ -8,6 +8,7 @@ import { GestaoSDRs } from "@/components/Dashboard/GestaoSDRs";
 import { GestaoOrigens } from "@/components/Dashboard/GestaoOrigens";
 import { GestaoTimes } from "@/components/Dashboard/GestaoTimes";
 import { GestaoLideres } from "@/components/Dashboard/GestaoLideres";
+import { GestaoUsuarios } from "@/components/Dashboard/GestaoUsuarios";
 import { LancamentoSDRPage } from "@/components/Dashboard/LancamentoSDRPage";
 import { LancamentoDisparoPage } from "@/components/Dashboard/LancamentoDisparoPage";
 import { LancamentoTrafegoPage } from "@/components/Dashboard/LancamentoTrafegoPage";
@@ -15,12 +16,14 @@ import { ResumoSemanal } from "@/components/Dashboard/ResumoSemanal";
 import { ImportExcel } from "@/components/Dashboard/ImportExcel";
 import { ExportExcel } from "@/components/Dashboard/ExportExcel";
 import { useAtendimentos, useClosers, useSdrs, useOrigens, useTimes, useLideres } from "@/hooks/useAtendimentos";
+import { useAuth } from "@/hooks/useAuth";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { LayoutDashboard, PlusCircle, Users, Headphones, Globe, FileSpreadsheet, Zap, TrendingUp, Calendar, Shield, Crown } from "lucide-react";
+import { LayoutDashboard, PlusCircle, Users, Headphones, Globe, FileSpreadsheet, Zap, TrendingUp, Calendar, Shield, Crown, UserCog } from "lucide-react";
 import { startOfMonth, endOfMonth, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 const Index = () => {
+  const { isAdmin } = useAuth();
   const [periodType, setPeriodType] = useState<PeriodType>("custom");
   const [dateRange, setDateRange] = useState({
     start: startOfMonth(new Date()),
@@ -58,7 +61,7 @@ const Index = () => {
       <main className="container py-8">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <TabsList className="bg-secondary/50 p-1 h-auto grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-11 gap-1 w-full">
+            <TabsList className={`bg-secondary/50 p-1 h-auto grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 ${isAdmin ? 'lg:grid-cols-12' : 'lg:grid-cols-11'} gap-1 w-full`}>
               <TabsTrigger value="dashboard" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2">
                 <LayoutDashboard className="h-4 w-4" />
                 Dashboard
@@ -103,6 +106,12 @@ const Index = () => {
                 <Globe className="h-4 w-4" />
                 Origens
               </TabsTrigger>
+              {isAdmin && (
+                <TabsTrigger value="usuarios" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2">
+                  <UserCog className="h-4 w-4" />
+                  Usuários
+                </TabsTrigger>
+              )}
             </TabsList>
             
             <div className="flex gap-2">
@@ -129,6 +138,7 @@ const Index = () => {
               isLoading={isLoading}
               times={timesData}
               closers={allClosers}
+              sdrs={allSdrs}
             />
           </TabsContent>
 
@@ -211,6 +221,16 @@ const Index = () => {
             </div>
             <GestaoOrigens origens={allOrigens} />
           </TabsContent>
+
+          {isAdmin && (
+            <TabsContent value="usuarios" className="space-y-6">
+              <div className="opacity-0 animate-fade-in">
+                <h2 className="font-display text-3xl font-bold text-foreground">Usuários</h2>
+                <p className="text-muted-foreground">Gerencie os usuários do sistema</p>
+              </div>
+              <GestaoUsuarios />
+            </TabsContent>
+          )}
         </Tabs>
       </main>
 

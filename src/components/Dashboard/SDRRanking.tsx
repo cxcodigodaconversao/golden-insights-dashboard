@@ -2,6 +2,20 @@ import { useMemo } from "react";
 import { Atendimento } from "@/hooks/useAtendimentos";
 import { Users } from "lucide-react";
 
+interface Time {
+  id: string;
+  nome: string;
+  cor: string | null;
+  ativo: boolean;
+}
+
+interface SDR {
+  id: string;
+  nome: string;
+  time_id: string | null;
+  ativo: boolean;
+}
+
 interface SDRStats {
   nome: string;
   agendamentos: number;
@@ -14,9 +28,11 @@ interface SDRStats {
 interface SDRRankingProps {
   data: Atendimento[];
   sdrsList: string[];
+  times?: Time[];
+  sdrs?: SDR[];
 }
 
-export function SDRRanking({ data, sdrsList }: SDRRankingProps) {
+export function SDRRanking({ data, sdrsList, times = [], sdrs = [] }: SDRRankingProps) {
   const ranking = useMemo(() => {
     const sdrMap: Record<string, SDRStats> = {};
 
@@ -50,6 +66,12 @@ export function SDRRanking({ data, sdrsList }: SDRRankingProps) {
     }).format(value);
   };
 
+  const getTeamForSDR = (sdrNome: string) => {
+    const sdr = sdrs.find(s => s.nome === sdrNome);
+    if (!sdr?.time_id) return null;
+    return times.find(t => t.id === sdr.time_id);
+  };
+
   if (ranking.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-8 text-center">
@@ -61,27 +83,42 @@ export function SDRRanking({ data, sdrsList }: SDRRankingProps) {
 
   return (
     <div className="space-y-3">
-      {ranking.map((sdr, index) => (
-        <div
-          key={sdr.nome}
-          className="flex items-center gap-4 rounded-lg border border-border bg-secondary/50 p-3 transition-colors hover:bg-secondary"
-        >
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/20 text-sm font-semibold text-primary">
-            {index + 1}
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="font-medium text-foreground truncate">{sdr.nome}</p>
-            <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-              <span>{sdr.agendamentos} agendados</span>
-              <span>{sdr.taxaComparecimento.toFixed(0)}% comp.</span>
+      {ranking.map((sdr, index) => {
+        const team = getTeamForSDR(sdr.nome);
+        
+        return (
+          <div
+            key={sdr.nome}
+            className="flex items-center gap-4 rounded-lg border border-border bg-secondary/50 p-3 transition-colors hover:bg-secondary"
+          >
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/20 text-sm font-semibold text-primary">
+              {index + 1}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-medium text-foreground truncate">{sdr.nome}</p>
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+                {team && (
+                  <span 
+                    className="inline-flex items-center rounded px-1.5 py-0.5 text-xs font-medium"
+                    style={{ 
+                      backgroundColor: `${team.cor}20`, 
+                      color: team.cor || 'hsl(var(--muted-foreground))' 
+                    }}
+                  >
+                    {team.nome}
+                  </span>
+                )}
+                <span>{sdr.agendamentos} agendados</span>
+                <span>{sdr.taxaComparecimento.toFixed(0)}% comp.</span>
+              </div>
+            </div>
+            <div className="text-right">
+              <p className="font-semibold text-primary">{sdr.vendas} vendas</p>
+              <p className="text-xs text-muted-foreground">{formatCurrency(sdr.receita)}</p>
             </div>
           </div>
-          <div className="text-right">
-            <p className="font-semibold text-primary">{sdr.vendas} vendas</p>
-            <p className="text-xs text-muted-foreground">{formatCurrency(sdr.receita)}</p>
-          </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }

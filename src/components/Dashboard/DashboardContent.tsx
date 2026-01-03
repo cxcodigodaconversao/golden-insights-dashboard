@@ -15,11 +15,18 @@ import { Skeleton } from "@/components/ui/skeleton";
 interface Time {
   id: string;
   nome: string;
-  cor: string;
+  cor: string | null;
   ativo: boolean;
 }
 
 interface Closer {
+  id: string;
+  nome: string;
+  time_id: string | null;
+  ativo: boolean;
+}
+
+interface SDR {
   id: string;
   nome: string;
   time_id: string | null;
@@ -34,6 +41,7 @@ interface DashboardContentProps {
   isLoading: boolean;
   times?: Time[];
   closers?: Closer[];
+  sdrs?: SDR[];
 }
 
 export function DashboardContent({ 
@@ -43,7 +51,8 @@ export function DashboardContent({
   dateRange, 
   isLoading,
   times = [],
-  closers = []
+  closers = [],
+  sdrs = []
 }: DashboardContentProps) {
   const filteredData = useMemo(() => {
     return atendimentos.filter(
@@ -201,13 +210,13 @@ export function DashboardContent({
           <h3 className="mb-4 font-display text-lg font-semibold text-foreground">
             Ranking de Closers
           </h3>
-          <CloserRanking data={ranking} />
+          <CloserRanking data={ranking} times={times} closers={closers} />
         </div>
         <div className="rounded-xl border border-border bg-card p-6 card-shadow opacity-0 animate-fade-in stagger-5">
           <h3 className="mb-4 font-display text-lg font-semibold text-foreground">
             Ranking de SDRs
           </h3>
-          <SDRRanking data={filteredData} sdrsList={sdrsList} />
+          <SDRRanking data={filteredData} sdrsList={sdrsList} times={times} sdrs={sdrs} />
         </div>
       </div>
 
