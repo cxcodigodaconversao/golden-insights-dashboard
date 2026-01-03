@@ -113,9 +113,9 @@ export function GestaoUsuarios() {
           password: formData.password,
           nome: formData.nome,
           role: formData.role,
-          time_id: formData.time_id || null,
-          closer_id: formData.closer_id || null,
-          sdr_id: formData.sdr_id || null,
+          time_id: formData.time_id && formData.time_id !== "none" ? formData.time_id : null,
+          closer_id: formData.closer_id && formData.closer_id !== "none" ? formData.closer_id : null,
+          sdr_id: formData.sdr_id && formData.sdr_id !== "none" ? formData.sdr_id : null,
         },
       });
 
@@ -349,7 +349,7 @@ export function GestaoUsuarios() {
                         <SelectValue placeholder="Selecione um time" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Nenhum</SelectItem>
+                        <SelectItem value="none">Nenhum</SelectItem>
                         {times.filter(t => t.ativo).map((time) => (
                           <SelectItem key={time.id} value={time.id}>{time.nome}</SelectItem>
                         ))}
@@ -367,7 +367,7 @@ export function GestaoUsuarios() {
                           <SelectValue placeholder="Selecione um closer" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">Nenhum</SelectItem>
+                          <SelectItem value="none">Nenhum</SelectItem>
                           {closers.filter(c => c.ativo).map((closer) => (
                             <SelectItem key={closer.id} value={closer.id}>{closer.nome}</SelectItem>
                           ))}
@@ -386,7 +386,7 @@ export function GestaoUsuarios() {
                           <SelectValue placeholder="Selecione um SDR" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">Nenhum</SelectItem>
+                          <SelectItem value="none">Nenhum</SelectItem>
                           {sdrs.filter(s => s.ativo).map((sdr) => (
                             <SelectItem key={sdr.id} value={sdr.id}>{sdr.nome}</SelectItem>
                           ))}
