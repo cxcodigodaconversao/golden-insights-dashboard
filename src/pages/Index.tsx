@@ -132,11 +132,16 @@ const Index = () => {
 
   const isLoading = isLoadingAtendimentos || isLoadingClosers || isLoadingSdrs || isLoadingOrigens || isLoadingTimes || isLoadingLideres;
 
+  // Permissões por perfil:
+  // - Admin: acesso completo
+  // - Líder: dashboard, resumo, cadastrar, lançamentos, metas (da equipe)
+  // - Vendedor/SDR: apenas dashboard e resumo metas (próprios resultados)
   const canSeeDashboard = true;
   const canSeeResumo = isAdmin || isLider;
   const canSeeCadastrar = isAdmin || isLider;
-  const canSeeLancamentos = isAdmin || isLider;
-  const canSeeMetas = isAdmin || isLider;
+  const canSeeLancamentos = isAdmin || isLider || isVendedor || isSdr; // Vendedor/SDR pode lançar seus próprios
+  const canSeeMetas = isAdmin;
+  const canSeeResumoMetas = true; // Todos podem ver suas próprias metas
   const canSeeNotificacoes = isAdmin;
   const canSeeGestao = isAdmin;
   const canSeeUsuarios = isAdmin;
@@ -206,16 +211,16 @@ const Index = () => {
                 </>
               )}
               {canSeeMetas && (
-                <>
-                  <TabsTrigger value="metas" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2">
-                    <Target className="h-4 w-4" />
-                    Metas
-                  </TabsTrigger>
-                  <TabsTrigger value="resumo-metas" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2">
-                    <BarChart3 className="h-4 w-4" />
-                    Resumo Metas
-                  </TabsTrigger>
-                </>
+                <TabsTrigger value="metas" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2">
+                  <Target className="h-4 w-4" />
+                  Metas
+                </TabsTrigger>
+              )}
+              {canSeeResumoMetas && (
+                <TabsTrigger value="resumo-metas" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2">
+                  <BarChart3 className="h-4 w-4" />
+                  Resumo Metas
+                </TabsTrigger>
               )}
               {canSeeNotificacoes && (
                 <TabsTrigger value="notificacoes" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2">
@@ -368,23 +373,33 @@ const Index = () => {
           )}
 
           {canSeeMetas && (
-            <>
-              <TabsContent value="metas" className="space-y-6">
-                <div className="opacity-0 animate-fade-in">
-                  <h2 className="font-display text-3xl font-bold text-foreground">Metas Mensais</h2>
-                  <p className="text-muted-foreground">Defina e acompanhe as metas de cada closer e SDR</p>
-                </div>
-                <GestaoMetas times={allTimes} />
-              </TabsContent>
+            <TabsContent value="metas" className="space-y-6">
+              <div className="opacity-0 animate-fade-in">
+                <h2 className="font-display text-3xl font-bold text-foreground">Metas Mensais</h2>
+                <p className="text-muted-foreground">Defina e acompanhe as metas de cada closer e SDR</p>
+              </div>
+              <GestaoMetas times={allTimes} />
+            </TabsContent>
+          )}
 
-              <TabsContent value="resumo-metas" className="space-y-6">
-                <div className="opacity-0 animate-fade-in">
-                  <h2 className="font-display text-3xl font-bold text-foreground">Resumo de Metas</h2>
-                  <p className="text-muted-foreground">Acompanhe quantos closers e SDRs estão próximos de bater suas metas</p>
-                </div>
-                <ResumoMetas teamFilter={effectiveTeamFilter} />
-              </TabsContent>
-            </>
+          {canSeeResumoMetas && (
+            <TabsContent value="resumo-metas" className="space-y-6">
+              <div className="opacity-0 animate-fade-in">
+                <h2 className="font-display text-3xl font-bold text-foreground">
+                  {(isVendedor || isSdr) ? "Minhas Metas" : "Resumo de Metas"}
+                </h2>
+                <p className="text-muted-foreground">
+                  {(isVendedor || isSdr) 
+                    ? "Acompanhe seu progresso em relação às suas metas" 
+                    : "Acompanhe quantos closers e SDRs estão próximos de bater suas metas"}
+                </p>
+              </div>
+              <ResumoMetas 
+                teamFilter={effectiveTeamFilter} 
+                userCloserId={isVendedor ? profile?.closer_id : undefined}
+                userSdrId={isSdr ? profile?.sdr_id : undefined}
+              />
+            </TabsContent>
           )}
 
           {canSeeNotificacoes && (
