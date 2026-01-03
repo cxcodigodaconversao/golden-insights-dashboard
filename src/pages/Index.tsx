@@ -12,6 +12,7 @@ import { GestaoLideres } from "@/components/Dashboard/GestaoLideres";
 import { GestaoUsuarios } from "@/components/Dashboard/GestaoUsuarios";
 import { GestaoMetas } from "@/components/Dashboard/GestaoMetas";
 import { GestaoNotificacoes } from "@/components/Dashboard/GestaoNotificacoes";
+import { ResumoMetas } from "@/components/Dashboard/ResumoMetas";
 import { LancamentoSDRPage } from "@/components/Dashboard/LancamentoSDRPage";
 import { LancamentoDisparoPage } from "@/components/Dashboard/LancamentoDisparoPage";
 import { LancamentoTrafegoPage } from "@/components/Dashboard/LancamentoTrafegoPage";
@@ -21,7 +22,7 @@ import { ExportExcel } from "@/components/Dashboard/ExportExcel";
 import { useAtendimentos, useClosers, useSdrs, useOrigens, useTimes, useLideres } from "@/hooks/useAtendimentos";
 import { useAuth } from "@/hooks/useAuth";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { LayoutDashboard, PlusCircle, Users, Headphones, Globe, FileSpreadsheet, Zap, TrendingUp, Calendar, Shield, Crown, UserCog, Target, Bell } from "lucide-react";
+import { LayoutDashboard, PlusCircle, Users, Headphones, Globe, FileSpreadsheet, Zap, TrendingUp, Calendar, Shield, Crown, UserCog, Target, Bell, BarChart3 } from "lucide-react";
 import { startOfMonth, endOfMonth, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -205,10 +206,16 @@ const Index = () => {
                 </>
               )}
               {canSeeMetas && (
-                <TabsTrigger value="metas" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2">
-                  <Target className="h-4 w-4" />
-                  Metas
-                </TabsTrigger>
+                <>
+                  <TabsTrigger value="metas" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2">
+                    <Target className="h-4 w-4" />
+                    Metas
+                  </TabsTrigger>
+                  <TabsTrigger value="resumo-metas" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2">
+                    <BarChart3 className="h-4 w-4" />
+                    Resumo Metas
+                  </TabsTrigger>
+                </>
               )}
               {canSeeNotificacoes && (
                 <TabsTrigger value="notificacoes" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2">
@@ -361,13 +368,23 @@ const Index = () => {
           )}
 
           {canSeeMetas && (
-            <TabsContent value="metas" className="space-y-6">
-              <div className="opacity-0 animate-fade-in">
-                <h2 className="font-display text-3xl font-bold text-foreground">Metas Mensais</h2>
-                <p className="text-muted-foreground">Defina e acompanhe as metas de cada closer e SDR</p>
-              </div>
-              <GestaoMetas times={allTimes} />
-            </TabsContent>
+            <>
+              <TabsContent value="metas" className="space-y-6">
+                <div className="opacity-0 animate-fade-in">
+                  <h2 className="font-display text-3xl font-bold text-foreground">Metas Mensais</h2>
+                  <p className="text-muted-foreground">Defina e acompanhe as metas de cada closer e SDR</p>
+                </div>
+                <GestaoMetas times={allTimes} />
+              </TabsContent>
+
+              <TabsContent value="resumo-metas" className="space-y-6">
+                <div className="opacity-0 animate-fade-in">
+                  <h2 className="font-display text-3xl font-bold text-foreground">Resumo de Metas</h2>
+                  <p className="text-muted-foreground">Acompanhe quantos closers e SDRs estão próximos de bater suas metas</p>
+                </div>
+                <ResumoMetas teamFilter={effectiveTeamFilter} />
+              </TabsContent>
+            </>
           )}
 
           {canSeeNotificacoes && (
