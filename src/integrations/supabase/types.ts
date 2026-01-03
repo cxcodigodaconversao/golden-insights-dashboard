@@ -65,6 +65,48 @@ export type Database = {
         }
         Relationships: []
       }
+      audit_logs: {
+        Row: {
+          action: string
+          created_at: string
+          id: string
+          ip_address: string | null
+          new_data: Json | null
+          old_data: Json | null
+          record_id: string | null
+          table_name: string
+          user_id: string
+          user_name: string
+          user_role: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          id?: string
+          ip_address?: string | null
+          new_data?: Json | null
+          old_data?: Json | null
+          record_id?: string | null
+          table_name: string
+          user_id: string
+          user_name: string
+          user_role: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          id?: string
+          ip_address?: string | null
+          new_data?: Json | null
+          old_data?: Json | null
+          record_id?: string | null
+          table_name?: string
+          user_id?: string
+          user_name?: string
+          user_role?: string
+        }
+        Relationships: []
+      }
       closers: {
         Row: {
           ativo: boolean
@@ -306,26 +348,57 @@ export type Database = {
       profiles: {
         Row: {
           ativo: boolean
+          closer_id: string | null
           created_at: string
           email: string
           id: string
           nome: string
+          sdr_id: string | null
+          time_id: string | null
         }
         Insert: {
           ativo?: boolean
+          closer_id?: string | null
           created_at?: string
           email: string
           id: string
           nome: string
+          sdr_id?: string | null
+          time_id?: string | null
         }
         Update: {
           ativo?: boolean
+          closer_id?: string | null
           created_at?: string
           email?: string
           id?: string
           nome?: string
+          sdr_id?: string | null
+          time_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_closer_id_fkey"
+            columns: ["closer_id"]
+            isOneToOne: false
+            referencedRelation: "closers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profiles_sdr_id_fkey"
+            columns: ["sdr_id"]
+            isOneToOne: false
+            referencedRelation: "sdrs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profiles_time_id_fkey"
+            columns: ["time_id"]
+            isOneToOne: false
+            referencedRelation: "times"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       sdrs: {
         Row: {
@@ -450,6 +523,8 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_user_role: { Args: { _user_id: string }; Returns: string }
+      get_user_team_id: { Args: { _user_id: string }; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -459,7 +534,7 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "admin" | "user"
+      app_role: "admin" | "user" | "lider" | "vendedor" | "sdr"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -587,7 +662,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "user"],
+      app_role: ["admin", "user", "lider", "vendedor", "sdr"],
     },
   },
 } as const
