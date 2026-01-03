@@ -7,7 +7,7 @@ import { Target, TrendingUp, AlertTriangle, CheckCircle2, Users, Headphones } fr
 import { useMetas } from "@/hooks/useMetas";
 import { useClosers, useSdrs, useAtendimentos } from "@/hooks/useAtendimentos";
 import { useLancamentosSDR } from "@/hooks/useLancamentos";
-import { format, startOfMonth, endOfMonth, addMonths } from "date-fns";
+import { format, startOfMonth, endOfMonth, addMonths, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 interface ResumoMetasProps {
@@ -54,7 +54,7 @@ export function ResumoMetas({ teamFilter }: ResumoMetasProps) {
     return result;
   }, []);
 
-  const monthStart = useMemo(() => new Date(selectedMonth), [selectedMonth]);
+  const monthStart = useMemo(() => parseISO(selectedMonth), [selectedMonth]);
   const monthEnd = useMemo(() => endOfMonth(monthStart), [monthStart]);
 
   // Filter by team if specified
@@ -333,7 +333,7 @@ export function ResumoMetas({ teamFilter }: ResumoMetasProps) {
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-foreground">
             <Target className="h-5 w-5 text-primary" />
-            Progresso de Metas - {format(new Date(selectedMonth), "MMMM yyyy", { locale: ptBR })}
+            Progresso de Metas - {format(parseISO(selectedMonth), "MMMM yyyy", { locale: ptBR })}
           </CardTitle>
         </CardHeader>
         <CardContent>

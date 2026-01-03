@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Target, Save, Trash2, Users, Headphones } from "lucide-react";
 import { useMetas, useCreateMeta, useDeleteMeta } from "@/hooks/useMetas";
 import { useClosers, useSdrs } from "@/hooks/useAtendimentos";
-import { format, startOfMonth, addMonths, subMonths } from "date-fns";
+import { format, startOfMonth, addMonths, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 
@@ -205,7 +205,7 @@ export function GestaoMetas({ times = [] }: GestaoMetasProps) {
       <Card className="border-border bg-card">
         <CardHeader>
           <CardTitle className="text-foreground">
-            Metas de {selectedTipo === "closer" ? "Closers" : "SDRs"} - {format(new Date(selectedMonth), "MMMM yyyy", { locale: ptBR })}
+            Metas de {selectedTipo === "closer" ? "Closers" : "SDRs"} - {format(parseISO(selectedMonth), "MMMM yyyy", { locale: ptBR })}
           </CardTitle>
         </CardHeader>
         <CardContent>
