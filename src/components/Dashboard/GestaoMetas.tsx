@@ -158,36 +158,50 @@ export function GestaoMetas({ times = [] }: GestaoMetasProps) {
           </div>
 
           <div className="grid gap-4 md:grid-cols-3">
-            <div className="space-y-2">
-              <Label>Meta de Vendas</Label>
-              <Input
-                type="number"
-                placeholder="Ex: 10"
-                value={metaVendas}
-                onChange={e => setMetaVendas(e.target.value)}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Meta de Receita (R$)</Label>
-              <Input
-                type="number"
-                placeholder="Ex: 50000"
-                value={metaReceita}
-                onChange={e => setMetaReceita(e.target.value)}
-              />
-            </div>
-
-            {selectedTipo === "sdr" && (
+            {selectedTipo === "closer" && (
               <div className="space-y-2">
-                <Label>Meta de Agendamentos</Label>
+                <Label>Meta de Receita (R$)</Label>
                 <Input
                   type="number"
-                  placeholder="Ex: 30"
-                  value={metaAgendamentos}
-                  onChange={e => setMetaAgendamentos(e.target.value)}
+                  placeholder="Ex: 50000"
+                  value={metaReceita}
+                  onChange={e => setMetaReceita(e.target.value)}
                 />
               </div>
+            )}
+
+            {selectedTipo === "sdr" && (
+              <>
+                <div className="space-y-2">
+                  <Label>Meta de Vendas</Label>
+                  <Input
+                    type="number"
+                    placeholder="Ex: 10"
+                    value={metaVendas}
+                    onChange={e => setMetaVendas(e.target.value)}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Meta de Receita (R$)</Label>
+                  <Input
+                    type="number"
+                    placeholder="Ex: 50000"
+                    value={metaReceita}
+                    onChange={e => setMetaReceita(e.target.value)}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Meta de Agendamentos</Label>
+                  <Input
+                    type="number"
+                    placeholder="Ex: 30"
+                    value={metaAgendamentos}
+                    onChange={e => setMetaAgendamentos(e.target.value)}
+                  />
+                </div>
+              </>
             )}
           </div>
 
@@ -218,10 +232,15 @@ export function GestaoMetas({ times = [] }: GestaoMetasProps) {
               <TableHeader>
                 <TableRow>
                   <TableHead>Nome</TableHead>
-                  <TableHead className="text-right">Meta Vendas</TableHead>
-                  <TableHead className="text-right">Meta Receita</TableHead>
+                  {selectedTipo === "closer" && (
+                    <TableHead className="text-right">Meta Receita</TableHead>
+                  )}
                   {selectedTipo === "sdr" && (
-                    <TableHead className="text-right">Meta Agendamentos</TableHead>
+                    <>
+                      <TableHead className="text-right">Meta Vendas</TableHead>
+                      <TableHead className="text-right">Meta Receita</TableHead>
+                      <TableHead className="text-right">Meta Agendamentos</TableHead>
+                    </>
                   )}
                   <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
@@ -230,10 +249,15 @@ export function GestaoMetas({ times = [] }: GestaoMetasProps) {
                 {filteredMetas.map(meta => (
                   <TableRow key={meta.id}>
                     <TableCell className="font-medium">{getReferenciaNome(meta)}</TableCell>
-                    <TableCell className="text-right">{meta.meta_vendas}</TableCell>
-                    <TableCell className="text-right">{formatCurrency(meta.meta_receita)}</TableCell>
+                    {selectedTipo === "closer" && (
+                      <TableCell className="text-right">{formatCurrency(meta.meta_receita)}</TableCell>
+                    )}
                     {selectedTipo === "sdr" && (
-                      <TableCell className="text-right">{meta.meta_agendamentos}</TableCell>
+                      <>
+                        <TableCell className="text-right">{meta.meta_vendas}</TableCell>
+                        <TableCell className="text-right">{formatCurrency(meta.meta_receita)}</TableCell>
+                        <TableCell className="text-right">{meta.meta_agendamentos}</TableCell>
+                      </>
                     )}
                     <TableCell className="text-right">
                       <Button
