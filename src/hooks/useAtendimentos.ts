@@ -17,19 +17,22 @@ export interface CloserStats {
 }
 
 export const statusColors: Record<string, { bg: string; text: string }> = {
+  "Venda Confirmada": { bg: "bg-success/20", text: "text-success" },
   "Venda Recorrente": { bg: "bg-success/20", text: "text-success" },
   "Venda": { bg: "bg-success/20", text: "text-success" },
   "Pagamento agendado": { bg: "bg-warning/20", text: "text-warning" },
   "Em negociação": { bg: "bg-primary/20", text: "text-primary" },
-  "Não compareceu": { bg: "bg-destructive/20", text: "text-destructive" },
+  "Não compareceu": { bg: "bg-orange-500/20", text: "text-orange-500" },
+  "Não fechou": { bg: "bg-destructive/20", text: "text-destructive" },
   "Reembolsada": { bg: "bg-destructive/20", text: "text-destructive" },
   "Cancelado": { bg: "bg-destructive/20", text: "text-destructive" },
   "Sem interesse": { bg: "bg-muted", text: "text-muted-foreground" },
   "Sem dinheiro": { bg: "bg-muted", text: "text-muted-foreground" },
   "Não é prioridade": { bg: "bg-muted", text: "text-muted-foreground" },
   "Quer apenas no futuro": { bg: "bg-secondary", text: "text-secondary-foreground" },
-  "Call Remarcada": { bg: "bg-secondary", text: "text-secondary-foreground" },
+  "Call Remarcada": { bg: "bg-purple-500/20", text: "text-purple-500" },
   "Sem qualificação": { bg: "bg-muted", text: "text-muted-foreground" },
+  "Remarcado": { bg: "bg-purple-500/20", text: "text-purple-500" },
 };
 
 export function useAtendimentos() {

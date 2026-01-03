@@ -11,8 +11,8 @@ const STATUS_COLORS: Record<string, string> = {
   "Venda": "#22c55e",
   "Pagamento agendado": "#eab308",
   "Em negociação": "#d2bc8f",
-  "Não compareceu": "#ef4444",
-  "Não fechou": "#f97316",
+  "Não compareceu": "#f97316",  // Laranja
+  "Não fechou": "#ef4444",       // Vermelho
   "Sem interesse": "#6b7280",
   "Sem dinheiro": "#9ca3af",
   "Reembolsada": "#dc2626",
