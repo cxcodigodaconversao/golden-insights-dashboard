@@ -117,23 +117,14 @@ export function CloserRanking({ data, times = [], closers = [] }: CloserRankingP
               </div>
             </div>
 
-            {meta && (meta.meta_vendas > 0 || meta.meta_receita > 0) && (
-              <div className="grid gap-2 pt-2 border-t border-border/50 md:grid-cols-2">
-                {meta.meta_vendas > 0 && (
-                  <MetasProgressBar
-                    atual={closer.vendas}
-                    meta={meta.meta_vendas}
-                    label="Meta Vendas"
-                  />
-                )}
-                {meta.meta_receita > 0 && (
-                  <MetasProgressBar
-                    atual={closer.receita}
-                    meta={meta.meta_receita}
-                    label="Meta Receita"
-                    formatValue={formatCurrency}
-                  />
-                )}
+            {meta && meta.meta_receita > 0 && (
+              <div className="pt-2 border-t border-border/50">
+                <MetasProgressBar
+                  atual={closer.receita}
+                  meta={meta.meta_receita}
+                  label="Meta Receita"
+                  formatValue={formatCurrency}
+                />
               </div>
             )}
           </div>
