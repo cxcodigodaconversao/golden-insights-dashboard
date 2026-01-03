@@ -11,12 +11,15 @@ import {
   RefreshCcw,
   AlertCircle,
   DollarSign,
-  ArrowRight
+  ArrowRight,
+  Video,
+  ExternalLink
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { Button } from "@/components/ui/button";
 import { useLeadById, useHistoricoByLeadId, useAtendimentosByLeadId } from "@/hooks/useLeads";
 import { statusColors } from "@/hooks/useAtendimentos";
 
@@ -187,24 +190,49 @@ export function LeadHistorico({ leadId, open, onOpenChange }: LeadHistoricoProps
                 <div>
                   <h4 className="text-sm font-medium text-muted-foreground mb-3">Atendimentos</h4>
                   <div className="space-y-2">
-                    {atendimentos.map((atendimento) => (
+                    {atendimentos.map((atendimento: any) => (
                       <div 
                         key={atendimento.id} 
-                        className="flex items-center justify-between rounded-lg border border-border bg-card p-3"
+                        className="rounded-lg border border-border bg-card p-3"
                       >
-                        <div className="flex items-center gap-3">
-                          <div className="text-sm">
-                            <p className="font-medium text-foreground">
-                              {format(new Date(atendimento.data_call), "dd/MM/yyyy HH:mm", { locale: ptBR })}
-                            </p>
-                            <p className="text-muted-foreground text-xs">
-                              Closer: {atendimento.closer}
-                            </p>
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-3">
+                            <div className="text-sm">
+                              <p className="font-medium text-foreground flex items-center gap-2">
+                                <Calendar className="h-4 w-4 text-muted-foreground" />
+                                {format(new Date(atendimento.data_call), "dd/MM/yyyy", { locale: ptBR })}
+                                {atendimento.hora_call && (
+                                  <span className="text-muted-foreground flex items-center gap-1">
+                                    <Clock className="h-3 w-3" />
+                                    {atendimento.hora_call}
+                                  </span>
+                                )}
+                              </p>
+                              <p className="text-muted-foreground text-xs mt-1">
+                                Closer: {atendimento.closer}
+                              </p>
+                            </div>
                           </div>
+                          <Badge className={`${statusColors[atendimento.status]?.bg || "bg-gray-500"} ${statusColors[atendimento.status]?.text || "text-white"}`}>
+                            {atendimento.status}
+                          </Badge>
                         </div>
-                        <Badge className={`${statusColors[atendimento.status]?.bg || "bg-gray-500"} ${statusColors[atendimento.status]?.text || "text-white"}`}>
-                          {atendimento.status}
-                        </Badge>
+                        
+                        {/* Link do Google Meet */}
+                        {atendimento.google_meet_link && (
+                          <div className="mt-2 pt-2 border-t border-border">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-7 text-xs"
+                              onClick={() => window.open(atendimento.google_meet_link, "_blank")}
+                            >
+                              <Video className="h-3 w-3 mr-1 text-blue-500" />
+                              Abrir Google Meet
+                              <ExternalLink className="h-3 w-3 ml-1" />
+                            </Button>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>

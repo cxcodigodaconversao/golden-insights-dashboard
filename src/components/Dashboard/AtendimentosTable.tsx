@@ -14,13 +14,14 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Search, Filter, Pencil, Trash2, CalendarIcon, History } from "lucide-react";
+import { Search, Filter, Pencil, Trash2, CalendarIcon, History, RefreshCcw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useFindOrCreateLead, useAddHistoricoInteracao, useUpdateAtendimentoLeadId } from "@/hooks/useLeads";
 import { LeadHistorico } from "./LeadHistorico";
+import { ReagendamentoForm } from "./ReagendamentoForm";
 
 interface AtendimentosTableProps {
   data: Atendimento[];
@@ -50,6 +51,10 @@ export function AtendimentosTable({ data }: AtendimentosTableProps) {
   // Estado para histórico do lead
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
   const [isHistoricoOpen, setIsHistoricoOpen] = useState(false);
+  
+  // Estado para reagendamento
+  const [reagendamentoItem, setReagendamentoItem] = useState<Atendimento | null>(null);
+  const [isReagendamentoOpen, setIsReagendamentoOpen] = useState(false);
 
   // Hooks para leads
   const findOrCreateLead = useFindOrCreateLead();
@@ -357,6 +362,31 @@ export function AtendimentosTable({ data }: AtendimentosTableProps) {
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
+                      
+                      {/* Botão Reagendar - só aparece para "Não compareceu" */}
+                      {item.status === "Não compareceu" && (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  setReagendamentoItem(item);
+                                  setIsReagendamentoOpen(true);
+                                }}
+                                className="hover:bg-secondary"
+                              >
+                                <RefreshCcw className="h-4 w-4 text-orange-500" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Reagendar atendimento</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      )}
+                      
                       <Button
                         variant="ghost"
                         size="sm"
@@ -562,6 +592,13 @@ export function AtendimentosTable({ data }: AtendimentosTableProps) {
         leadId={selectedLeadId} 
         open={isHistoricoOpen} 
         onOpenChange={setIsHistoricoOpen} 
+      />
+
+      {/* Modal de Reagendamento */}
+      <ReagendamentoForm
+        atendimento={reagendamentoItem}
+        open={isReagendamentoOpen}
+        onOpenChange={setIsReagendamentoOpen}
       />
     </div>
   );

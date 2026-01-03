@@ -20,7 +20,10 @@ export type Database = {
           created_at: string
           data_call: string
           email: string | null
+          google_event_id: string | null
+          google_meet_link: string | null
           gravacao: string | null
+          hora_call: string | null
           id: string
           info_sdr: string | null
           lead_id: string | null
@@ -37,7 +40,10 @@ export type Database = {
           created_at?: string
           data_call?: string
           email?: string | null
+          google_event_id?: string | null
+          google_meet_link?: string | null
           gravacao?: string | null
+          hora_call?: string | null
           id?: string
           info_sdr?: string | null
           lead_id?: string | null
@@ -54,7 +60,10 @@ export type Database = {
           created_at?: string
           data_call?: string
           email?: string | null
+          google_event_id?: string | null
+          google_meet_link?: string | null
           gravacao?: string | null
+          hora_call?: string | null
           id?: string
           info_sdr?: string | null
           lead_id?: string | null
@@ -149,6 +158,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      google_tokens: {
+        Row: {
+          access_token: string
+          created_at: string | null
+          expires_at: string
+          id: string
+          refresh_token: string
+          scope: string | null
+          token_type: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          access_token: string
+          created_at?: string | null
+          expires_at: string
+          id?: string
+          refresh_token: string
+          scope?: string | null
+          token_type?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          access_token?: string
+          created_at?: string | null
+          expires_at?: string
+          id?: string
+          refresh_token?: string
+          scope?: string | null
+          token_type?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
       }
       historico_interacoes: {
         Row: {
