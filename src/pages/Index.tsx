@@ -17,15 +17,13 @@ import { GestaoNotificacoes } from "@/components/Dashboard/GestaoNotificacoes";
 import { ResumoMetas } from "@/components/Dashboard/ResumoMetas";
 import { ComissoesView } from "@/components/Dashboard/ComissoesView";
 import { LancamentoSDRPage } from "@/components/Dashboard/LancamentoSDRPage";
-import { LancamentoDisparoPage } from "@/components/Dashboard/LancamentoDisparoPage";
-import { LancamentoTrafegoPage } from "@/components/Dashboard/LancamentoTrafegoPage";
 import { ResumoSemanal } from "@/components/Dashboard/ResumoSemanal";
 import { ImportExcel } from "@/components/Dashboard/ImportExcel";
 import { ExportExcel } from "@/components/Dashboard/ExportExcel";
 import { useAtendimentos, useClosers, useSdrs, useOrigens, useTimes, useLideres } from "@/hooks/useAtendimentos";
 import { useAuth } from "@/hooks/useAuth";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { LayoutDashboard, PlusCircle, Users, Headphones, Globe, FileSpreadsheet, Zap, TrendingUp, Calendar, Shield, Crown, UserCog, Target, Bell, BarChart3, DollarSign } from "lucide-react";
+import { LayoutDashboard, PlusCircle, Users, Headphones, Globe, FileSpreadsheet, Calendar, Shield, Crown, UserCog, Target, Bell, BarChart3, DollarSign } from "lucide-react";
 import { startOfMonth, endOfMonth, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -222,14 +220,6 @@ const Index = () => {
                     <FileSpreadsheet className="h-4 w-4" />
                     <span className="hidden sm:inline">SDR</span>
                   </TabsTrigger>
-                  <TabsTrigger value="disparo" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2">
-                    <Zap className="h-4 w-4" />
-                    <span className="hidden sm:inline">Disparo</span>
-                  </TabsTrigger>
-                  <TabsTrigger value="trafego" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2">
-                    <TrendingUp className="h-4 w-4" />
-                    <span className="hidden sm:inline">Tráfego</span>
-                  </TabsTrigger>
                 </>
               )}
               {canSeeGestao && (
@@ -378,21 +368,6 @@ const Index = () => {
                 <LancamentoSDRPage />
               </TabsContent>
 
-              <TabsContent value="disparo" className="space-y-6">
-                <div className="opacity-0 animate-fade-in">
-                  <h2 className="font-display text-2xl sm:text-3xl font-bold text-foreground">Disparo (DC + Isca Digital)</h2>
-                  <p className="text-sm text-muted-foreground">Lançamentos e vendas de disparo</p>
-                </div>
-                <LancamentoDisparoPage />
-              </TabsContent>
-
-              <TabsContent value="trafego" className="space-y-6">
-                <div className="opacity-0 animate-fade-in">
-                  <h2 className="font-display text-2xl sm:text-3xl font-bold text-foreground">Tráfego (SS + Mic + Wpp)</h2>
-                  <p className="text-sm text-muted-foreground">Lançamentos e vendas de tráfego</p>
-                </div>
-                <LancamentoTrafegoPage />
-              </TabsContent>
             </>
           )}
 
