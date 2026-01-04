@@ -95,6 +95,46 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Handle reset-password action
+    if (action === 'reset-password') {
+      const { userId, newPassword } = body;
+      
+      if (!userId || !newPassword) {
+        return new Response(
+          JSON.stringify({ error: 'ID do usuário e nova senha são obrigatórios' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      if (newPassword.length < 6) {
+        return new Response(
+          JSON.stringify({ error: 'A senha deve ter no mínimo 6 caracteres' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      console.log(`Resetting password for user: ${userId}`);
+
+      const { error: resetError } = await supabaseAdmin.auth.admin.updateUserById(userId, {
+        password: newPassword
+      });
+
+      if (resetError) {
+        console.log('Error resetting password:', resetError);
+        return new Response(
+          JSON.stringify({ error: resetError.message }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      console.log('Password reset successfully');
+
+      return new Response(
+        JSON.stringify({ success: true }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Handle create action (default)
     const { email, password, nome, role = 'user', time_id, closer_id, sdr_id } = body;
 

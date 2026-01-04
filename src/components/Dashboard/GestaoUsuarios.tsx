@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { useAuditLog } from "@/hooks/useAuditLog";
 import { useTimes, useClosers, useSdrs } from "@/hooks/useAtendimentos";
-import { UserPlus, Loader2, Shield, User, RefreshCw, Crown, Headphones, Trash2 } from "lucide-react";
+import { UserPlus, Loader2, Shield, User, RefreshCw, Crown, Headphones, Trash2, KeyRound } from "lucide-react";
 import { AuditLogViewer } from "./AuditLogViewer";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -50,6 +50,12 @@ export function GestaoUsuarios() {
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Password reset state
+  const [isResetPasswordOpen, setIsResetPasswordOpen] = useState(false);
+  const [resetPasswordUser, setResetPasswordUser] = useState<UserWithRole | null>(null);
+  const [newPassword, setNewPassword] = useState("");
+  const [isResettingPassword, setIsResettingPassword] = useState(false);
   
   const [formData, setFormData] = useState({
     nome: "",
@@ -246,6 +252,55 @@ export function GestaoUsuarios() {
         variant: "destructive",
       });
     }
+  };
+
+  const handleResetPassword = async () => {
+    if (!resetPasswordUser || !newPassword) return;
+    
+    setIsResettingPassword(true);
+    try {
+      const response = await supabase.functions.invoke('create-user', {
+        body: { 
+          action: 'reset-password', 
+          userId: resetPasswordUser.id,
+          newPassword 
+        },
+      });
+
+      if (response.error) throw new Error(response.error.message);
+      if (response.data?.error) throw new Error(response.data.error);
+
+      await logAction({
+        action: 'update',
+        tableName: 'profiles',
+        recordId: resetPasswordUser.id,
+        newData: { nome: resetPasswordUser.nome, action: 'password_reset' },
+      });
+
+      toast({ 
+        title: "Senha redefinida!",
+        description: `A senha de ${resetPasswordUser.nome} foi alterada com sucesso.`
+      });
+      
+      setIsResetPasswordOpen(false);
+      setResetPasswordUser(null);
+      setNewPassword("");
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "Ocorreu um erro inesperado.";
+      toast({
+        title: "Erro ao redefinir senha",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      setIsResettingPassword(false);
+    }
+  };
+
+  const openResetPasswordDialog = (user: UserWithRole) => {
+    setResetPasswordUser(user);
+    setNewPassword("");
+    setIsResetPasswordOpen(true);
   };
 
   const getRoleBadge = (role: AppRole) => {
@@ -460,7 +515,15 @@ export function GestaoUsuarios() {
                           {user.ativo ? 'Ativo' : 'Inativo'}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-right space-x-2">
+                      <TableCell className="text-right space-x-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => openResetPasswordDialog(user)}
+                          title="Redefinir Senha"
+                        >
+                          <KeyRound className="h-4 w-4" />
+                        </Button>
                         <Button
                           variant="ghost"
                           size="sm"
@@ -484,6 +547,45 @@ export function GestaoUsuarios() {
             </Table>
           </div>
         )}
+
+        {/* Reset Password Dialog */}
+        <Dialog open={isResetPasswordOpen} onOpenChange={setIsResetPasswordOpen}>
+          <DialogContent className="max-w-sm">
+            <DialogHeader>
+              <DialogTitle>Redefinir Senha</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Definir nova senha para <strong>{resetPasswordUser?.nome}</strong>
+              </p>
+              <div className="space-y-2">
+                <Label htmlFor="newPassword">Nova Senha</Label>
+                <Input
+                  id="newPassword"
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="Mínimo 6 caracteres"
+                  minLength={6}
+                />
+              </div>
+              <Button 
+                onClick={handleResetPassword} 
+                className="w-full" 
+                disabled={isResettingPassword || newPassword.length < 6}
+              >
+                {isResettingPassword ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Redefinindo...
+                  </>
+                ) : (
+                  'Redefinir Senha'
+                )}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </TabsContent>
 
       <TabsContent value="audit">
