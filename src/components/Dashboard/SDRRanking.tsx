@@ -97,7 +97,7 @@ export function SDRRanking({ data, sdrsList, times = [], sdrs = [] }: SDRRanking
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2">
       {ranking.map((sdr, index) => {
         const team = getTeamForSDR(sdr.nome);
         const sdrId = getSdrId(sdr.nome);
@@ -106,43 +106,45 @@ export function SDRRanking({ data, sdrsList, times = [], sdrs = [] }: SDRRanking
         return (
           <div
             key={sdr.nome}
-            className="flex flex-col gap-3 rounded-lg border border-border bg-secondary/50 p-3 transition-colors hover:bg-secondary"
+            className="flex flex-col gap-2 rounded-lg border border-border bg-secondary/50 p-2 sm:p-3 transition-colors hover:bg-secondary overflow-hidden"
           >
-            <div className="flex items-center gap-4">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/20 text-sm font-semibold text-primary">
-                {index + 1}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="font-medium text-foreground truncate">{sdr.nome}</p>
-                <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
-                  {team && (
-                    <span 
-                      className="inline-flex items-center rounded px-1.5 py-0.5 text-xs font-medium"
-                      style={{ 
-                        backgroundColor: `${team.cor}20`, 
-                        color: team.cor || 'hsl(var(--muted-foreground))' 
-                      }}
-                    >
-                      {team.nome}
-                    </span>
-                  )}
-                  <span>{sdr.agendamentos} agendados</span>
-                  <span>{sdr.taxaComparecimento.toFixed(0)}% comp.</span>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/20 text-xs font-semibold text-primary">
+                  {index + 1}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium text-foreground text-sm truncate">{sdr.nome}</p>
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
+                    {team && (
+                      <span 
+                        className="inline-flex items-center rounded px-1 py-0.5 text-xs font-medium shrink-0"
+                        style={{ 
+                          backgroundColor: `${team.cor}20`, 
+                          color: team.cor || 'hsl(var(--muted-foreground))' 
+                        }}
+                      >
+                        {team.nome}
+                      </span>
+                    )}
+                    <span>{sdr.agendamentos} agend.</span>
+                    <span>{sdr.taxaComparecimento.toFixed(0)}%</span>
+                  </div>
                 </div>
               </div>
-              <div className="text-right">
-                <p className="font-semibold text-primary">{sdr.vendas} vendas</p>
+              <div className="flex items-center justify-between pl-9 sm:pl-0 sm:flex-col sm:items-end gap-0.5">
+                <p className="font-semibold text-primary text-sm">{sdr.vendas} vendas</p>
                 <p className="text-xs text-muted-foreground">{formatCurrency(sdr.receita)}</p>
               </div>
             </div>
 
             {meta && (meta.meta_agendamentos > 0 || meta.meta_vendas > 0) && (
-              <div className="grid gap-2 pt-2 border-t border-border/50 md:grid-cols-2">
+              <div className="grid gap-2 pt-2 border-t border-border/50 grid-cols-1 sm:grid-cols-2">
                 {meta.meta_agendamentos > 0 && (
                   <MetasProgressBar
                     atual={sdr.agendamentos}
                     meta={meta.meta_agendamentos}
-                    label="Meta Agendamentos"
+                    label="Meta Agend."
                   />
                 )}
                 {meta.meta_vendas > 0 && (

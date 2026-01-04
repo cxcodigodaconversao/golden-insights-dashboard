@@ -346,11 +346,11 @@ export function ResumoMetas({ teamFilter, userCloserId, userSdrId }: ResumoMetas
   return (
     <div className="space-y-6">
       {/* Filters */}
-      <div className="flex flex-wrap gap-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:gap-4">
         <div className="space-y-1">
           <label className="text-sm text-muted-foreground">Mês</label>
           <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-            <SelectTrigger className="w-48">
+            <SelectTrigger className="w-full sm:w-48">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -367,7 +367,7 @@ export function ResumoMetas({ teamFilter, userCloserId, userSdrId }: ResumoMetas
           <div className="space-y-1">
             <label className="text-sm text-muted-foreground">Tipo</label>
             <Select value={selectedTipo} onValueChange={(v: "closer" | "sdr" | "todos" | "times") => setSelectedTipo(v)}>
-              <SelectTrigger className="w-40">
+              <SelectTrigger className="w-full sm:w-40">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -398,51 +398,51 @@ export function ResumoMetas({ teamFilter, userCloserId, userSdrId }: ResumoMetas
 
       {/* KPI Cards - only show when not viewing times */}
       {selectedTipo !== "times" && (
-        <div className="grid gap-4 md:grid-cols-4">
+        <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
           <Card className="border-border bg-card">
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Com Meta</p>
-                  <p className="text-3xl font-bold text-foreground">{kpis.total}</p>
+            <CardContent className="p-3 sm:pt-6 sm:p-6">
+              <div className="flex items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="text-xs sm:text-sm text-muted-foreground truncate">Com Meta</p>
+                  <p className="text-xl sm:text-3xl font-bold text-foreground">{kpis.total}</p>
                 </div>
-                <Target className="h-8 w-8 text-primary opacity-80" />
+                <Target className="h-6 w-6 sm:h-8 sm:w-8 text-primary opacity-80 shrink-0" />
               </div>
             </CardContent>
           </Card>
 
           <Card className="border-border bg-card">
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Bateram (100%+)</p>
-                  <p className="text-3xl font-bold text-green-500">{kpis.bateram}</p>
+            <CardContent className="p-3 sm:pt-6 sm:p-6">
+              <div className="flex items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="text-xs sm:text-sm text-muted-foreground truncate">Bateram</p>
+                  <p className="text-xl sm:text-3xl font-bold text-green-500">{kpis.bateram}</p>
                 </div>
-                <CheckCircle2 className="h-8 w-8 text-green-500 opacity-80" />
+                <CheckCircle2 className="h-6 w-6 sm:h-8 sm:w-8 text-green-500 opacity-80 shrink-0" />
               </div>
             </CardContent>
           </Card>
 
           <Card className="border-border bg-card">
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Perto (80-99%)</p>
-                  <p className="text-3xl font-bold text-yellow-500">{kpis.perto}</p>
+            <CardContent className="p-3 sm:pt-6 sm:p-6">
+              <div className="flex items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="text-xs sm:text-sm text-muted-foreground truncate">Perto</p>
+                  <p className="text-xl sm:text-3xl font-bold text-yellow-500">{kpis.perto}</p>
                 </div>
-                <TrendingUp className="h-8 w-8 text-yellow-500 opacity-80" />
+                <TrendingUp className="h-6 w-6 sm:h-8 sm:w-8 text-yellow-500 opacity-80 shrink-0" />
               </div>
             </CardContent>
           </Card>
 
           <Card className="border-border bg-card">
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Atrasados (&lt;80%)</p>
-                  <p className="text-3xl font-bold text-red-500">{kpis.atrasados}</p>
+            <CardContent className="p-3 sm:pt-6 sm:p-6">
+              <div className="flex items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="text-xs sm:text-sm text-muted-foreground truncate">Atrasados</p>
+                  <p className="text-xl sm:text-3xl font-bold text-red-500">{kpis.atrasados}</p>
                 </div>
-                <AlertTriangle className="h-8 w-8 text-red-500 opacity-80" />
+                <AlertTriangle className="h-6 w-6 sm:h-8 sm:w-8 text-red-500 opacity-80 shrink-0" />
               </div>
             </CardContent>
           </Card>
@@ -473,32 +473,32 @@ export function ResumoMetas({ teamFilter, userCloserId, userSdrId }: ResumoMetas
                       key={team.id} 
                       className="p-4 rounded-lg border border-border bg-secondary/30 space-y-3"
                     >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <span className="text-lg font-bold text-muted-foreground w-8">
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                          <span className="text-sm sm:text-lg font-bold text-muted-foreground w-6 sm:w-8 shrink-0">
                             {index + 1}º
                           </span>
                           <div 
-                            className="w-3 h-3 rounded-full" 
+                            className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full shrink-0" 
                             style={{ backgroundColor: team.cor }}
                           />
-                          <span className="font-semibold text-foreground">{team.nome}</span>
-                          <Badge variant="outline" className="text-xs">
-                            {team.totalClosers} closers • {team.totalSdrs} SDRs
+                          <span className="font-semibold text-foreground text-sm sm:text-base truncate">{team.nome}</span>
+                          <Badge variant="outline" className="text-xs hidden sm:inline-flex">
+                            {team.totalClosers}C • {team.totalSdrs}S
                           </Badge>
                         </div>
-                        <div className="flex items-center gap-3">
-                          <span className={`text-2xl font-bold ${getStatusColor(team.status)}`}>
+                        <div className="flex items-center gap-2 sm:gap-3 pl-8 sm:pl-0">
+                          <span className={`text-lg sm:text-2xl font-bold ${getStatusColor(team.status)}`}>
                             {Math.round(mainProgress)}%
                           </span>
                           {team.status === "bateu" && (
-                            <Badge className="bg-green-500/20 text-green-500 border-green-500/30">Bateu!</Badge>
+                            <Badge className="bg-green-500/20 text-green-500 border-green-500/30 text-xs">Bateu!</Badge>
                           )}
                           {team.status === "perto" && (
-                            <Badge className="bg-yellow-500/20 text-yellow-500 border-yellow-500/30">Quase!</Badge>
+                            <Badge className="bg-yellow-500/20 text-yellow-500 border-yellow-500/30 text-xs">Quase!</Badge>
                           )}
                           {team.status === "atrasado" && (
-                            <Badge className="bg-red-500/20 text-red-500 border-red-500/30">Atenção</Badge>
+                            <Badge className="bg-red-500/20 text-red-500 border-red-500/30 text-xs">Atenção</Badge>
                           )}
                         </div>
                       </div>
@@ -510,23 +510,23 @@ export function ResumoMetas({ teamFilter, userCloserId, userSdrId }: ResumoMetas
                         />
                       </div>
 
-                      <div className="grid gap-2 md:grid-cols-4 text-sm">
+                      <div className="grid gap-1 sm:gap-2 grid-cols-1 sm:grid-cols-3 text-xs sm:text-sm">
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">Vendas:</span>
                           <span className="font-medium">
-                            {team.realizadoVendas} / {team.metaVendasTotal}
+                            {team.realizadoVendas}/{team.metaVendasTotal}
                           </span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">Receita:</span>
-                          <span className="font-medium">
-                            {formatCurrency(team.realizadoReceita)} / {formatCurrency(team.metaReceitaTotal)}
+                          <span className="font-medium truncate ml-2">
+                            {formatCurrency(team.realizadoReceita)}
                           </span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-muted-foreground">Agendamentos:</span>
+                          <span className="text-muted-foreground">Agend.:</span>
                           <span className="font-medium">
-                            {team.realizadoAgendamentos} / {team.metaAgendamentosTotal}
+                            {team.realizadoAgendamentos}/{team.metaAgendamentosTotal}
                           </span>
                         </div>
                       </div>
@@ -565,30 +565,30 @@ export function ResumoMetas({ teamFilter, userCloserId, userSdrId }: ResumoMetas
                       key={item.id} 
                       className="p-4 rounded-lg border border-border bg-secondary/30 space-y-3"
                     >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <span className="text-lg font-bold text-muted-foreground w-8">
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                          <span className="text-sm sm:text-lg font-bold text-muted-foreground w-6 sm:w-8 shrink-0">
                             {index + 1}º
                           </span>
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
                             {item.tipo === "closer" ? (
-                              <Users className="h-4 w-4 text-primary" />
+                              <Users className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary shrink-0" />
                             ) : (
-                              <Headphones className="h-4 w-4 text-orange-500" />
+                              <Headphones className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-orange-500 shrink-0" />
                             )}
-                            <span className="font-semibold text-foreground">{item.nome}</span>
+                            <span className="font-semibold text-foreground text-sm sm:text-base truncate">{item.nome}</span>
                           </div>
-                          <Badge variant="outline" className="text-xs">
+                          <Badge variant="outline" className="text-xs hidden sm:inline-flex shrink-0">
                             {item.tipo === "closer" ? "Closer" : "SDR"}
                           </Badge>
                           {item.timeNome && (
-                            <Badge variant="secondary" className="text-xs">
+                            <Badge variant="secondary" className="text-xs hidden md:inline-flex shrink-0">
                               {item.timeNome}
                             </Badge>
                           )}
                         </div>
-                        <div className="flex items-center gap-3">
-                          <span className={`text-2xl font-bold ${getStatusColor(item.status)}`}>
+                        <div className="flex items-center gap-2 sm:gap-3 pl-8 sm:pl-0">
+                          <span className={`text-lg sm:text-2xl font-bold ${getStatusColor(item.status)}`}>
                             {Math.round(mainProgress)}%
                           </span>
                           {getStatusBadge(item.status)}
@@ -602,34 +602,34 @@ export function ResumoMetas({ teamFilter, userCloserId, userSdrId }: ResumoMetas
                         />
                       </div>
 
-                      <div className="grid gap-2 md:grid-cols-3 text-sm">
+                      <div className="grid gap-1 sm:gap-2 grid-cols-1 sm:grid-cols-2 text-xs sm:text-sm">
                         {item.tipo === "closer" ? (
                           <>
                             <div className="flex justify-between">
-                              <span className="text-muted-foreground">Vendas Realizadas:</span>
+                              <span className="text-muted-foreground">Vendas:</span>
                               <span className="font-medium">
                                 {item.realizadoVendas}
                               </span>
                             </div>
                             <div className="flex justify-between">
                               <span className="text-muted-foreground">Receita:</span>
-                              <span className="font-medium">
-                                {formatCurrency(item.realizadoReceita)} / {formatCurrency(item.metaReceita)}
+                              <span className="font-medium truncate ml-2">
+                                {formatCurrency(item.realizadoReceita)}
                               </span>
                             </div>
                           </>
                         ) : (
                           <>
                             <div className="flex justify-between">
-                              <span className="text-muted-foreground">Agendamentos:</span>
+                              <span className="text-muted-foreground">Agend.:</span>
                               <span className="font-medium">
-                                {item.realizadoAgendamentos} / {item.metaAgendamentos}
+                                {item.realizadoAgendamentos}/{item.metaAgendamentos}
                               </span>
                             </div>
                             <div className="flex justify-between">
                               <span className="text-muted-foreground">Vendas:</span>
                               <span className="font-medium">
-                                {item.realizadoVendas} / {item.metaVendas}
+                                {item.realizadoVendas}/{item.metaVendas}
                               </span>
                             </div>
                           </>

@@ -469,6 +469,10 @@ export type Database = {
       }
       metas: {
         Row: {
+          bonus_extra: number | null
+          campanha_ativa: boolean | null
+          campanha_nome: string | null
+          comissao_percentual: number | null
           created_at: string | null
           id: string
           mes: string
@@ -480,6 +484,10 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          bonus_extra?: number | null
+          campanha_ativa?: boolean | null
+          campanha_nome?: string | null
+          comissao_percentual?: number | null
           created_at?: string | null
           id?: string
           mes: string
@@ -491,6 +499,10 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          bonus_extra?: number | null
+          campanha_ativa?: boolean | null
+          campanha_nome?: string | null
+          comissao_percentual?: number | null
           created_at?: string | null
           id?: string
           mes?: string

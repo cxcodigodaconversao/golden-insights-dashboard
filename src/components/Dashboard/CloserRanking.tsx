@@ -59,7 +59,7 @@ export function CloserRanking({ data, times = [], closers = [] }: CloserRankingP
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {data.map((closer, index) => {
         const team = getTeamForCloser(closer.nome);
         const closerId = getCloserId(closer.nome);
@@ -69,26 +69,26 @@ export function CloserRanking({ data, times = [], closers = [] }: CloserRankingP
           <div
             key={closer.nome}
             className={cn(
-              "flex flex-col gap-3 rounded-lg border border-border bg-card p-4 transition-all hover:border-primary/30",
+              "flex flex-col gap-2 rounded-lg border border-border bg-card p-3 transition-all hover:border-primary/30 overflow-hidden",
               index === 0 && "border-primary/30 glow-gold"
             )}
           >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-3 min-w-0">
                 <div
                   className={cn(
-                    "flex h-10 w-10 items-center justify-center rounded-full font-display font-bold",
+                    "flex h-8 w-8 shrink-0 items-center justify-center rounded-full font-display font-bold text-sm",
                     getRankingBadge(index)
                   )}
                 >
-                  {index === 0 ? <Trophy className="h-5 w-5" /> : index + 1}
+                  {index === 0 ? <Trophy className="h-4 w-4" /> : index + 1}
                 </div>
-                <div>
-                  <p className="font-medium text-foreground">{closer.nome}</p>
-                  <div className="flex items-center gap-2">
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium text-foreground truncate">{closer.nome}</p>
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                     {team && (
                       <span 
-                        className="inline-flex items-center rounded px-1.5 py-0.5 text-xs font-medium"
+                        className="inline-flex items-center rounded px-1.5 py-0.5 text-xs font-medium shrink-0"
                         style={{ 
                           backgroundColor: `${team.cor}20`, 
                           color: team.cor || 'hsl(var(--muted-foreground))' 
@@ -97,22 +97,22 @@ export function CloserRanking({ data, times = [], closers = [] }: CloserRankingP
                         {team.nome}
                       </span>
                     )}
-                    <span className="text-sm text-muted-foreground">
-                      {closer.vendas} vendas • {closer.percentualFechamento.toFixed(1)}% conversão
+                    <span className="text-xs text-muted-foreground">
+                      {closer.vendas} vendas • {closer.percentualFechamento.toFixed(1)}%
                     </span>
                   </div>
                 </div>
               </div>
-              <div className="text-right">
+              <div className="flex items-center justify-between sm:flex-col sm:items-end gap-1 pl-11 sm:pl-0">
                 <p className={cn(
-                  "font-display font-bold",
+                  "font-display font-bold text-sm sm:text-base",
                   index === 0 ? "text-primary" : "text-foreground"
                 )}>
                   {formatCurrency(closer.receita)}
                 </p>
-                <div className="flex items-center justify-end gap-1 text-sm text-muted-foreground">
+                <div className="flex items-center gap-1 text-xs text-muted-foreground">
                   <Users className="h-3 w-3" />
-                  <span>{closer.compareceram} atendimentos</span>
+                  <span>{closer.compareceram} atend.</span>
                 </div>
               </div>
             </div>
