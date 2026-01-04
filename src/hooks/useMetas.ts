@@ -10,6 +10,10 @@ export interface Meta {
   meta_vendas: number;
   meta_receita: number;
   meta_agendamentos: number;
+  comissao_percentual: number;
+  bonus_extra: number;
+  campanha_nome: string | null;
+  campanha_ativa: boolean;
   created_at: string;
   updated_at: string;
 }

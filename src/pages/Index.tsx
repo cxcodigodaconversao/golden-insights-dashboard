@@ -2,7 +2,9 @@ import { useState, useMemo } from "react";
 import { Header } from "@/components/Dashboard/Header";
 import { PeriodFilter, PeriodType } from "@/components/Dashboard/PeriodFilter";
 import { TeamFilter } from "@/components/Dashboard/TeamFilter";
+import { AdvancedFilters } from "@/components/Dashboard/AdvancedFilters";
 import { DashboardContent } from "@/components/Dashboard/DashboardContent";
+import { MeuDashboard } from "@/components/Dashboard/MeuDashboard";
 import { AtendimentoForm } from "@/components/Dashboard/AtendimentoForm";
 import { GestaoClosers } from "@/components/Dashboard/GestaoClosers";
 import { GestaoSDRs } from "@/components/Dashboard/GestaoSDRs";
@@ -13,6 +15,7 @@ import { GestaoUsuarios } from "@/components/Dashboard/GestaoUsuarios";
 import { GestaoMetas } from "@/components/Dashboard/GestaoMetas";
 import { GestaoNotificacoes } from "@/components/Dashboard/GestaoNotificacoes";
 import { ResumoMetas } from "@/components/Dashboard/ResumoMetas";
+import { ComissoesView } from "@/components/Dashboard/ComissoesView";
 import { LancamentoSDRPage } from "@/components/Dashboard/LancamentoSDRPage";
 import { LancamentoDisparoPage } from "@/components/Dashboard/LancamentoDisparoPage";
 import { LancamentoTrafegoPage } from "@/components/Dashboard/LancamentoTrafegoPage";
@@ -22,7 +25,7 @@ import { ExportExcel } from "@/components/Dashboard/ExportExcel";
 import { useAtendimentos, useClosers, useSdrs, useOrigens, useTimes, useLideres } from "@/hooks/useAtendimentos";
 import { useAuth } from "@/hooks/useAuth";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { LayoutDashboard, PlusCircle, Users, Headphones, Globe, FileSpreadsheet, Zap, TrendingUp, Calendar, Shield, Crown, UserCog, Target, Bell, BarChart3 } from "lucide-react";
+import { LayoutDashboard, PlusCircle, Users, Headphones, Globe, FileSpreadsheet, Zap, TrendingUp, Calendar, Shield, Crown, UserCog, Target, Bell, BarChart3, DollarSign } from "lucide-react";
 import { startOfMonth, endOfMonth, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -35,6 +38,8 @@ const Index = () => {
   });
   const [activeTab, setActiveTab] = useState("dashboard");
   const [selectedTeam, setSelectedTeam] = useState<string | null>(null);
+  const [selectedCloser, setSelectedCloser] = useState<string | null>(null);
+  const [selectedSdr, setSelectedSdr] = useState<string | null>(null);
 
   const { data: atendimentos = [], isLoading: isLoadingAtendimentos } = useAtendimentos();
   const { data: closersData = [], isLoading: isLoadingClosers } = useClosers();
@@ -51,13 +56,13 @@ const Index = () => {
 
   // Determine which team to use based on role
   const effectiveTeamFilter = useMemo(() => {
-    // Admin and Lider can filter by team
-    if (isAdmin || isLider) {
-      // Lider can only see their own team
-      if (isLider && profile?.time_id) {
-        return profile.time_id;
-      }
+    // Admin can filter by team
+    if (isAdmin) {
       return selectedTeam;
+    }
+    // Lider can only see their own team
+    if (isLider && profile?.time_id) {
+      return profile.time_id;
     }
     // Vendedor and SDR only see their team
     if ((isVendedor || isSdr) && profile?.time_id) {
@@ -68,14 +73,26 @@ const Index = () => {
 
   // Filter closers and SDRs by team
   const filteredClosers = useMemo(() => {
-    if (!effectiveTeamFilter) return allClosers;
-    return allClosers.filter(c => c.time_id === effectiveTeamFilter);
-  }, [allClosers, effectiveTeamFilter]);
+    let filtered = allClosers;
+    if (effectiveTeamFilter) {
+      filtered = filtered.filter(c => c.time_id === effectiveTeamFilter);
+    }
+    if (selectedCloser) {
+      filtered = filtered.filter(c => c.id === selectedCloser);
+    }
+    return filtered;
+  }, [allClosers, effectiveTeamFilter, selectedCloser]);
 
   const filteredSdrs = useMemo(() => {
-    if (!effectiveTeamFilter) return allSdrs;
-    return allSdrs.filter(s => s.time_id === effectiveTeamFilter);
-  }, [allSdrs, effectiveTeamFilter]);
+    let filtered = allSdrs;
+    if (effectiveTeamFilter) {
+      filtered = filtered.filter(s => s.time_id === effectiveTeamFilter);
+    }
+    if (selectedSdr) {
+      filtered = filtered.filter(s => s.id === selectedSdr);
+    }
+    return filtered;
+  }, [allSdrs, effectiveTeamFilter, selectedSdr]);
 
   // For Vendedor/SDR: only show their own data
   const filteredAtendimentos = useMemo(() => {
@@ -83,11 +100,27 @@ const Index = () => {
     
     // Filter by team if applicable
     if (effectiveTeamFilter) {
-      const teamCloserNames = filteredClosers.map(c => c.nome);
-      const teamSdrNames = filteredSdrs.map(s => s.nome);
+      const teamCloserNames = allClosers.filter(c => c.time_id === effectiveTeamFilter).map(c => c.nome);
+      const teamSdrNames = allSdrs.filter(s => s.time_id === effectiveTeamFilter).map(s => s.nome);
       filtered = filtered.filter(a => 
         teamCloserNames.includes(a.closer) || teamSdrNames.includes(a.sdr)
       );
+    }
+
+    // Filter by specific closer
+    if (selectedCloser) {
+      const closerName = allClosers.find(c => c.id === selectedCloser)?.nome;
+      if (closerName) {
+        filtered = filtered.filter(a => a.closer === closerName);
+      }
+    }
+
+    // Filter by specific SDR
+    if (selectedSdr) {
+      const sdrName = allSdrs.find(s => s.id === selectedSdr)?.nome;
+      if (sdrName) {
+        filtered = filtered.filter(a => a.sdr === sdrName);
+      }
     }
 
     // For vendedor: only their own closes
@@ -107,7 +140,7 @@ const Index = () => {
     }
 
     return filtered;
-  }, [atendimentos, effectiveTeamFilter, filteredClosers, filteredSdrs, isVendedor, isSdr, profile, allClosers, allSdrs]);
+  }, [atendimentos, effectiveTeamFilter, selectedCloser, selectedSdr, isVendedor, isSdr, profile, allClosers, allSdrs]);
 
   const closersList = useMemo(() => {
     if (isVendedor && profile?.closer_id) {
@@ -139,12 +172,25 @@ const Index = () => {
   const canSeeDashboard = true;
   const canSeeResumo = isAdmin || isLider;
   const canSeeCadastrar = isAdmin || isLider;
-  const canSeeLancamentos = isAdmin || isLider || isVendedor || isSdr; // Vendedor/SDR pode lançar seus próprios
+  const canSeeLancamentos = isAdmin || isLider || isVendedor || isSdr;
   const canSeeMetas = isAdmin;
-  const canSeeResumoMetas = true; // Todos podem ver suas próprias metas
+  const canSeeResumoMetas = true;
+  const canSeeComissoes = true;
   const canSeeNotificacoes = isAdmin;
   const canSeeGestao = isAdmin;
   const canSeeUsuarios = isAdmin;
+
+  // Determine if user should see individual dashboard
+  const showIndividualDashboard = (isVendedor && profile?.closer_id) || (isSdr && profile?.sdr_id);
+  const userReferenciaNome = useMemo(() => {
+    if (isVendedor && profile?.closer_id) {
+      return allClosers.find(c => c.id === profile.closer_id)?.nome || "Usuário";
+    }
+    if (isSdr && profile?.sdr_id) {
+      return allSdrs.find(s => s.id === profile.sdr_id)?.nome || "Usuário";
+    }
+    return "Usuário";
+  }, [isVendedor, isSdr, profile, allClosers, allSdrs]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -156,33 +202,33 @@ const Index = () => {
             <TabsList className="bg-secondary/50 p-1 h-auto flex flex-wrap gap-1 w-full lg:w-auto">
               <TabsTrigger value="dashboard" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2">
                 <LayoutDashboard className="h-4 w-4" />
-                Dashboard
+                <span className="hidden sm:inline">Dashboard</span>
               </TabsTrigger>
               {canSeeResumo && (
                 <TabsTrigger value="resumo" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2">
                   <Calendar className="h-4 w-4" />
-                  Resumo
+                  <span className="hidden sm:inline">Resumo</span>
                 </TabsTrigger>
               )}
               {canSeeCadastrar && (
                 <TabsTrigger value="cadastrar" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2">
                   <PlusCircle className="h-4 w-4" />
-                  Cadastrar
+                  <span className="hidden sm:inline">Cadastrar</span>
                 </TabsTrigger>
               )}
               {canSeeLancamentos && (
                 <>
                   <TabsTrigger value="lancamentos-sdr" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2">
                     <FileSpreadsheet className="h-4 w-4" />
-                    SDR
+                    <span className="hidden sm:inline">SDR</span>
                   </TabsTrigger>
                   <TabsTrigger value="disparo" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2">
                     <Zap className="h-4 w-4" />
-                    Disparo
+                    <span className="hidden sm:inline">Disparo</span>
                   </TabsTrigger>
                   <TabsTrigger value="trafego" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2">
                     <TrendingUp className="h-4 w-4" />
-                    Tráfego
+                    <span className="hidden sm:inline">Tráfego</span>
                   </TabsTrigger>
                 </>
               )}
@@ -190,60 +236,59 @@ const Index = () => {
                 <>
                   <TabsTrigger value="times" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2">
                     <Shield className="h-4 w-4" />
-                    Times
+                    <span className="hidden sm:inline">Times</span>
                   </TabsTrigger>
                   <TabsTrigger value="lideres" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2">
                     <Crown className="h-4 w-4" />
-                    Líderes
+                    <span className="hidden sm:inline">Líderes</span>
                   </TabsTrigger>
                   <TabsTrigger value="closers" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2">
                     <Users className="h-4 w-4" />
-                    Closers
+                    <span className="hidden sm:inline">Closers</span>
                   </TabsTrigger>
                   <TabsTrigger value="sdrs" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2">
                     <Headphones className="h-4 w-4" />
-                    SDRs
+                    <span className="hidden sm:inline">SDRs</span>
                   </TabsTrigger>
                   <TabsTrigger value="origens" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2">
                     <Globe className="h-4 w-4" />
-                    Origens
+                    <span className="hidden sm:inline">Origens</span>
                   </TabsTrigger>
                 </>
               )}
               {canSeeMetas && (
                 <TabsTrigger value="metas" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2">
                   <Target className="h-4 w-4" />
-                  Metas
+                  <span className="hidden sm:inline">Metas</span>
                 </TabsTrigger>
               )}
               {canSeeResumoMetas && (
                 <TabsTrigger value="resumo-metas" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2">
                   <BarChart3 className="h-4 w-4" />
-                  Resumo Metas
+                  <span className="hidden sm:inline">Resumo</span>
+                </TabsTrigger>
+              )}
+              {canSeeComissoes && (
+                <TabsTrigger value="comissoes" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2">
+                  <DollarSign className="h-4 w-4" />
+                  <span className="hidden sm:inline">Comissões</span>
                 </TabsTrigger>
               )}
               {canSeeNotificacoes && (
                 <TabsTrigger value="notificacoes" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2">
                   <Bell className="h-4 w-4" />
-                  Notificações
+                  <span className="hidden sm:inline">Notif.</span>
                 </TabsTrigger>
               )}
               {canSeeUsuarios && (
                 <TabsTrigger value="usuarios" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2">
                   <UserCog className="h-4 w-4" />
-                  Usuários
+                  <span className="hidden sm:inline">Usuários</span>
                 </TabsTrigger>
               )}
             </TabsList>
             
             <div className="flex gap-2 flex-wrap">
-              {isAdmin && (
-                <TeamFilter 
-                  times={allTimes} 
-                  selectedTeam={selectedTeam} 
-                  onTeamChange={setSelectedTeam} 
-                />
-              )}
               {(isAdmin || isLider) && (
                 <>
                   <ImportExcel />
@@ -256,35 +301,58 @@ const Index = () => {
           <TabsContent value="dashboard" className="space-y-6">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div className="opacity-0 animate-fade-in">
-                <h2 className="font-display text-3xl font-bold text-foreground">
-                  {isVendedor && "Meus Resultados"}
-                  {isSdr && "Meus Resultados"}
-                  {(isAdmin || isLider) && "Dashboard de Resultados"}
-                  {!isVendedor && !isSdr && !isAdmin && !isLider && "Dashboard"}
+                <h2 className="font-display text-2xl sm:text-3xl font-bold text-foreground">
+                  {showIndividualDashboard ? "Meus Resultados" : "Dashboard de Resultados"}
                 </h2>
-                <p className="text-muted-foreground">
+                <p className="text-sm text-muted-foreground">
                   {format(dateRange.start, "dd 'de' MMMM", { locale: ptBR })} - {format(dateRange.end, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
                 </p>
               </div>
-              <PeriodFilter onPeriodChange={handlePeriodChange} currentPeriod={periodType} />
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+                {(isAdmin || isLider) && (
+                  <AdvancedFilters
+                    times={allTimes}
+                    closers={allClosers}
+                    sdrs={allSdrs}
+                    selectedTeam={selectedTeam}
+                    selectedCloser={selectedCloser}
+                    selectedSdr={selectedSdr}
+                    onTeamChange={setSelectedTeam}
+                    onCloserChange={setSelectedCloser}
+                    onSdrChange={setSelectedSdr}
+                  />
+                )}
+                <PeriodFilter onPeriodChange={handlePeriodChange} currentPeriod={periodType} />
+              </div>
             </div>
-            <DashboardContent 
-              atendimentos={filteredAtendimentos} 
-              closersList={closersList} 
-              sdrsList={sdrsList} 
-              dateRange={dateRange} 
-              isLoading={isLoading}
-              times={allTimes}
-              closers={filteredClosers}
-              sdrs={filteredSdrs}
-            />
+            
+            {showIndividualDashboard ? (
+              <MeuDashboard
+                atendimentos={filteredAtendimentos}
+                tipo={isVendedor ? "closer" : "sdr"}
+                referenciaId={(isVendedor ? profile?.closer_id : profile?.sdr_id) || ""}
+                referenciaNome={userReferenciaNome}
+                dateRange={dateRange}
+              />
+            ) : (
+              <DashboardContent 
+                atendimentos={filteredAtendimentos} 
+                closersList={closersList} 
+                sdrsList={sdrsList} 
+                dateRange={dateRange} 
+                isLoading={isLoading}
+                times={allTimes}
+                closers={filteredClosers}
+                sdrs={filteredSdrs}
+              />
+            )}
           </TabsContent>
 
           {canSeeResumo && (
             <TabsContent value="resumo" className="space-y-6">
               <div className="opacity-0 animate-fade-in">
-                <h2 className="font-display text-3xl font-bold text-foreground">Resumo Semanal</h2>
-                <p className="text-muted-foreground">Visão consolidada por período</p>
+                <h2 className="font-display text-2xl sm:text-3xl font-bold text-foreground">Resumo Semanal</h2>
+                <p className="text-sm text-muted-foreground">Visão consolidada por período</p>
               </div>
               <ResumoSemanal />
             </TabsContent>
@@ -293,8 +361,8 @@ const Index = () => {
           {canSeeCadastrar && (
             <TabsContent value="cadastrar" className="space-y-6">
               <div className="opacity-0 animate-fade-in">
-                <h2 className="font-display text-3xl font-bold text-foreground">Cadastrar Atendimento</h2>
-                <p className="text-muted-foreground">Registre um novo atendimento no sistema</p>
+                <h2 className="font-display text-2xl sm:text-3xl font-bold text-foreground">Cadastrar Atendimento</h2>
+                <p className="text-sm text-muted-foreground">Registre um novo atendimento no sistema</p>
               </div>
               <AtendimentoForm closers={closersData} sdrs={sdrsData} origens={origensData} onSuccess={() => setActiveTab("dashboard")} />
             </TabsContent>
@@ -304,24 +372,24 @@ const Index = () => {
             <>
               <TabsContent value="lancamentos-sdr" className="space-y-6">
                 <div className="opacity-0 animate-fade-in">
-                  <h2 className="font-display text-3xl font-bold text-foreground">Lançamentos SDR</h2>
-                  <p className="text-muted-foreground">Registre as atividades diárias dos SDRs</p>
+                  <h2 className="font-display text-2xl sm:text-3xl font-bold text-foreground">Lançamentos SDR</h2>
+                  <p className="text-sm text-muted-foreground">Registre as atividades diárias dos SDRs</p>
                 </div>
                 <LancamentoSDRPage />
               </TabsContent>
 
               <TabsContent value="disparo" className="space-y-6">
                 <div className="opacity-0 animate-fade-in">
-                  <h2 className="font-display text-3xl font-bold text-foreground">Disparo (DC + Isca Digital)</h2>
-                  <p className="text-muted-foreground">Lançamentos e vendas de disparo</p>
+                  <h2 className="font-display text-2xl sm:text-3xl font-bold text-foreground">Disparo (DC + Isca Digital)</h2>
+                  <p className="text-sm text-muted-foreground">Lançamentos e vendas de disparo</p>
                 </div>
                 <LancamentoDisparoPage />
               </TabsContent>
 
               <TabsContent value="trafego" className="space-y-6">
                 <div className="opacity-0 animate-fade-in">
-                  <h2 className="font-display text-3xl font-bold text-foreground">Tráfego (SS + Mic + Wpp)</h2>
-                  <p className="text-muted-foreground">Lançamentos e vendas de tráfego</p>
+                  <h2 className="font-display text-2xl sm:text-3xl font-bold text-foreground">Tráfego (SS + Mic + Wpp)</h2>
+                  <p className="text-sm text-muted-foreground">Lançamentos e vendas de tráfego</p>
                 </div>
                 <LancamentoTrafegoPage />
               </TabsContent>
@@ -332,40 +400,40 @@ const Index = () => {
             <>
               <TabsContent value="times" className="space-y-6">
                 <div className="opacity-0 animate-fade-in">
-                  <h2 className="font-display text-3xl font-bold text-foreground">Times</h2>
-                  <p className="text-muted-foreground">Gerencie os times da equipe comercial</p>
+                  <h2 className="font-display text-2xl sm:text-3xl font-bold text-foreground">Times</h2>
+                  <p className="text-sm text-muted-foreground">Gerencie os times da equipe comercial</p>
                 </div>
                 <GestaoTimes times={allTimes} />
               </TabsContent>
 
               <TabsContent value="lideres" className="space-y-6">
                 <div className="opacity-0 animate-fade-in">
-                  <h2 className="font-display text-3xl font-bold text-foreground">Líderes Comerciais</h2>
-                  <p className="text-muted-foreground">Gerencie os líderes de cada time</p>
+                  <h2 className="font-display text-2xl sm:text-3xl font-bold text-foreground">Líderes Comerciais</h2>
+                  <p className="text-sm text-muted-foreground">Gerencie os líderes de cada time</p>
                 </div>
                 <GestaoLideres lideres={allLideres} times={allTimes} />
               </TabsContent>
 
               <TabsContent value="closers" className="space-y-6">
                 <div className="opacity-0 animate-fade-in">
-                  <h2 className="font-display text-3xl font-bold text-foreground">Closers</h2>
-                  <p className="text-muted-foreground">Gerencie os closers da equipe</p>
+                  <h2 className="font-display text-2xl sm:text-3xl font-bold text-foreground">Closers</h2>
+                  <p className="text-sm text-muted-foreground">Gerencie os closers da equipe</p>
                 </div>
                 <GestaoClosers closers={allClosers} times={allTimes} />
               </TabsContent>
 
               <TabsContent value="sdrs" className="space-y-6">
                 <div className="opacity-0 animate-fade-in">
-                  <h2 className="font-display text-3xl font-bold text-foreground">SDRs</h2>
-                  <p className="text-muted-foreground">Gerencie os SDRs da equipe</p>
+                  <h2 className="font-display text-2xl sm:text-3xl font-bold text-foreground">SDRs</h2>
+                  <p className="text-sm text-muted-foreground">Gerencie os SDRs da equipe</p>
                 </div>
                 <GestaoSDRs sdrs={allSdrs} times={allTimes} />
               </TabsContent>
 
               <TabsContent value="origens" className="space-y-6">
                 <div className="opacity-0 animate-fade-in">
-                  <h2 className="font-display text-3xl font-bold text-foreground">Origens</h2>
-                  <p className="text-muted-foreground">Gerencie as origens de leads</p>
+                  <h2 className="font-display text-2xl sm:text-3xl font-bold text-foreground">Origens</h2>
+                  <p className="text-sm text-muted-foreground">Gerencie as origens de leads</p>
                 </div>
                 <GestaoOrigens origens={allOrigens} />
               </TabsContent>
@@ -375,8 +443,8 @@ const Index = () => {
           {canSeeMetas && (
             <TabsContent value="metas" className="space-y-6">
               <div className="opacity-0 animate-fade-in">
-                <h2 className="font-display text-3xl font-bold text-foreground">Metas Mensais</h2>
-                <p className="text-muted-foreground">Defina e acompanhe as metas de cada closer e SDR</p>
+                <h2 className="font-display text-2xl sm:text-3xl font-bold text-foreground">Metas Mensais</h2>
+                <p className="text-sm text-muted-foreground">Defina e acompanhe as metas de cada closer e SDR</p>
               </div>
               <GestaoMetas times={allTimes} />
             </TabsContent>
@@ -385,10 +453,10 @@ const Index = () => {
           {canSeeResumoMetas && (
             <TabsContent value="resumo-metas" className="space-y-6">
               <div className="opacity-0 animate-fade-in">
-                <h2 className="font-display text-3xl font-bold text-foreground">
+                <h2 className="font-display text-2xl sm:text-3xl font-bold text-foreground">
                   {(isVendedor || isSdr) ? "Minhas Metas" : "Resumo de Metas"}
                 </h2>
-                <p className="text-muted-foreground">
+                <p className="text-sm text-muted-foreground">
                   {(isVendedor || isSdr) 
                     ? "Acompanhe seu progresso em relação às suas metas" 
                     : "Acompanhe quantos closers e SDRs estão próximos de bater suas metas"}
@@ -402,11 +470,27 @@ const Index = () => {
             </TabsContent>
           )}
 
+          {canSeeComissoes && (
+            <TabsContent value="comissoes" className="space-y-6">
+              <div className="opacity-0 animate-fade-in">
+                <h2 className="font-display text-2xl sm:text-3xl font-bold text-foreground">
+                  {(isVendedor || isSdr) ? "Minha Comissão" : "Comissões"}
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                  {(isVendedor || isSdr) 
+                    ? "Acompanhe sua previsão de comissão" 
+                    : "Visualize as comissões de toda a equipe"}
+                </p>
+              </div>
+              <ComissoesView />
+            </TabsContent>
+          )}
+
           {canSeeNotificacoes && (
             <TabsContent value="notificacoes" className="space-y-6">
               <div className="opacity-0 animate-fade-in">
-                <h2 className="font-display text-3xl font-bold text-foreground">Notificações</h2>
-                <p className="text-muted-foreground">Configure alertas por email para metas e performance</p>
+                <h2 className="font-display text-2xl sm:text-3xl font-bold text-foreground">Notificações</h2>
+                <p className="text-sm text-muted-foreground">Configure alertas por email para metas e performance</p>
               </div>
               <GestaoNotificacoes />
             </TabsContent>
@@ -415,8 +499,8 @@ const Index = () => {
           {canSeeUsuarios && (
             <TabsContent value="usuarios" className="space-y-6">
               <div className="opacity-0 animate-fade-in">
-                <h2 className="font-display text-3xl font-bold text-foreground">Usuários</h2>
-                <p className="text-muted-foreground">Gerencie os usuários do sistema</p>
+                <h2 className="font-display text-2xl sm:text-3xl font-bold text-foreground">Usuários</h2>
+                <p className="text-sm text-muted-foreground">Gerencie os usuários do sistema</p>
               </div>
               <GestaoUsuarios />
             </TabsContent>

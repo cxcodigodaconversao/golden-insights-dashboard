@@ -5,7 +5,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Target, Save, Trash2, Users, Headphones } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
+import { Target, Save, Trash2, Users, Headphones, Gift, Percent } from "lucide-react";
 import { useMetas, useCreateMeta, useDeleteMeta } from "@/hooks/useMetas";
 import { useClosers, useSdrs } from "@/hooks/useAtendimentos";
 import { format, startOfMonth, addMonths, parseISO } from "date-fns";
@@ -25,6 +27,10 @@ export function GestaoMetas({ times = [] }: GestaoMetasProps) {
   const [metaVendas, setMetaVendas] = useState("");
   const [metaReceita, setMetaReceita] = useState("");
   const [metaAgendamentos, setMetaAgendamentos] = useState("");
+  const [comissaoPercentual, setComissaoPercentual] = useState("");
+  const [bonusExtra, setBonusExtra] = useState("");
+  const [campanhaNome, setCampanhaNome] = useState("");
+  const [campanhaAtiva, setCampanhaAtiva] = useState(false);
 
   const { data: metas = [], isLoading } = useMetas(selectedMonth);
   const { data: closers = [] } = useClosers(true);
@@ -59,6 +65,10 @@ export function GestaoMetas({ times = [] }: GestaoMetasProps) {
       meta_vendas: parseInt(metaVendas) || 0,
       meta_receita: parseFloat(metaReceita) || 0,
       meta_agendamentos: parseInt(metaAgendamentos) || 0,
+      comissao_percentual: parseFloat(comissaoPercentual) || 0,
+      bonus_extra: parseFloat(bonusExtra) || 0,
+      campanha_nome: campanhaNome || null,
+      campanha_ativa: campanhaAtiva,
     });
 
     // Reset form
@@ -66,6 +76,10 @@ export function GestaoMetas({ times = [] }: GestaoMetasProps) {
     setMetaVendas("");
     setMetaReceita("");
     setMetaAgendamentos("");
+    setComissaoPercentual("");
+    setBonusExtra("");
+    setCampanhaNome("");
+    setCampanhaAtiva(false);
   };
 
   const getReferenciaNome = (meta: { tipo: string; referencia_id: string }) => {
@@ -205,6 +219,60 @@ export function GestaoMetas({ times = [] }: GestaoMetasProps) {
             )}
           </div>
 
+          {/* Commission fields */}
+          <div className="border-t border-border pt-4 mt-4">
+            <h4 className="text-sm font-medium text-foreground mb-3 flex items-center gap-2">
+              <Percent className="h-4 w-4 text-primary" />
+              Comissão e Bônus
+            </h4>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+              <div className="space-y-2">
+                <Label>Comissão (%)</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  placeholder="Ex: 5"
+                  value={comissaoPercentual}
+                  onChange={e => setComissaoPercentual(e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Bônus Extra (R$)</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  placeholder="Ex: 1000"
+                  value={bonusExtra}
+                  onChange={e => setBonusExtra(e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Nome da Campanha</Label>
+                <Input
+                  type="text"
+                  placeholder="Ex: Campanha de Natal"
+                  value={campanhaNome}
+                  onChange={e => setCampanhaNome(e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Campanha Ativa?</Label>
+                <div className="flex items-center gap-2 h-10">
+                  <Switch
+                    checked={campanhaAtiva}
+                    onCheckedChange={setCampanhaAtiva}
+                  />
+                  <span className="text-sm text-muted-foreground">
+                    {campanhaAtiva ? "Sim" : "Não"}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <Button 
             onClick={handleSave} 
             disabled={createMeta.isPending}
@@ -228,51 +296,70 @@ export function GestaoMetas({ times = [] }: GestaoMetasProps) {
           ) : filteredMetas.length === 0 ? (
             <p className="text-muted-foreground">Nenhuma meta definida para este período.</p>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nome</TableHead>
-                  {selectedTipo === "closer" && (
-                    <TableHead className="text-right">Meta Receita</TableHead>
-                  )}
-                  {selectedTipo === "sdr" && (
-                    <>
-                      <TableHead className="text-right">Meta Vendas</TableHead>
-                      <TableHead className="text-right">Meta Receita</TableHead>
-                      <TableHead className="text-right">Meta Agendamentos</TableHead>
-                    </>
-                  )}
-                  <TableHead className="text-right">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredMetas.map(meta => (
-                  <TableRow key={meta.id}>
-                    <TableCell className="font-medium">{getReferenciaNome(meta)}</TableCell>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Nome</TableHead>
                     {selectedTipo === "closer" && (
-                      <TableCell className="text-right">{formatCurrency(meta.meta_receita)}</TableCell>
+                      <TableHead className="text-right">Meta Receita</TableHead>
                     )}
                     {selectedTipo === "sdr" && (
                       <>
-                        <TableCell className="text-right">{meta.meta_vendas}</TableCell>
-                        <TableCell className="text-right">{formatCurrency(meta.meta_receita)}</TableCell>
-                        <TableCell className="text-right">{meta.meta_agendamentos}</TableCell>
+                        <TableHead className="text-right">Vendas</TableHead>
+                        <TableHead className="text-right">Receita</TableHead>
+                        <TableHead className="text-right">Agend.</TableHead>
                       </>
                     )}
-                    <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => deleteMeta.mutate(meta.id)}
-                        disabled={deleteMeta.isPending}
-                      >
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </TableCell>
+                    <TableHead className="text-right">Comissão</TableHead>
+                    <TableHead className="text-right">Bônus</TableHead>
+                    <TableHead>Campanha</TableHead>
+                    <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {filteredMetas.map(meta => (
+                    <TableRow key={meta.id}>
+                      <TableCell className="font-medium">{getReferenciaNome(meta)}</TableCell>
+                      {selectedTipo === "closer" && (
+                        <TableCell className="text-right">{formatCurrency(meta.meta_receita)}</TableCell>
+                      )}
+                      {selectedTipo === "sdr" && (
+                        <>
+                          <TableCell className="text-right">{meta.meta_vendas}</TableCell>
+                          <TableCell className="text-right">{formatCurrency(meta.meta_receita)}</TableCell>
+                          <TableCell className="text-right">{meta.meta_agendamentos}</TableCell>
+                        </>
+                      )}
+                      <TableCell className="text-right">
+                        {meta.comissao_percentual > 0 ? `${meta.comissao_percentual}%` : "-"}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {meta.bonus_extra > 0 ? formatCurrency(meta.bonus_extra) : "-"}
+                      </TableCell>
+                      <TableCell>
+                        {meta.campanha_ativa && meta.campanha_nome ? (
+                          <Badge className="bg-green-500/20 text-green-500 border-green-500/30 gap-1">
+                            <Gift className="h-3 w-3" />
+                            {meta.campanha_nome}
+                          </Badge>
+                        ) : "-"}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => deleteMeta.mutate(meta.id)}
+                          disabled={deleteMeta.isPending}
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           )}
         </CardContent>
       </Card>
