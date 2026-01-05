@@ -7,16 +7,19 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
-import { Plus, Shield, ShieldOff, Pencil, Trash2 } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Plus, Shield, ShieldOff, Pencil, Trash2, Building2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { useClientes } from "@/hooks/useClientes";
 
 interface Time {
   id: string;
   nome: string;
   cor: string;
   ativo: boolean;
+  cliente_id?: string | null;
 }
 
 interface GestaoTimesProps {
@@ -36,8 +39,10 @@ const CORES_PREDEFINIDAS = [
 
 export function GestaoTimes({ times }: GestaoTimesProps) {
   const queryClient = useQueryClient();
+  const { data: clientes } = useClientes();
   const [novoTime, setNovoTime] = useState("");
   const [novaCor, setNovaCor] = useState(CORES_PREDEFINIDAS[0]);
+  const [novoClienteId, setNovoClienteId] = useState<string>("");
   const [isAdding, setIsAdding] = useState(false);
   const [editingTime, setEditingTime] = useState<Time | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -53,7 +58,8 @@ export function GestaoTimes({ times }: GestaoTimesProps) {
     try {
       const { error } = await supabase.from("times").insert({ 
         nome: novoTime.trim(),
-        cor: novaCor
+        cor: novaCor,
+        cliente_id: novoClienteId || null,
       });
       if (error) throw error;
 
@@ -61,6 +67,7 @@ export function GestaoTimes({ times }: GestaoTimesProps) {
       queryClient.invalidateQueries({ queryKey: ["times"] });
       setNovoTime("");
       setNovaCor(CORES_PREDEFINIDAS[0]);
+      setNovoClienteId("");
     } catch (error: any) {
       if (error.code === "23505") {
         toast.error("Este time já existe");
@@ -102,7 +109,11 @@ export function GestaoTimes({ times }: GestaoTimesProps) {
     try {
       const { error } = await supabase
         .from("times")
-        .update({ nome: editingTime.nome.trim(), cor: editingTime.cor })
+        .update({ 
+          nome: editingTime.nome.trim(), 
+          cor: editingTime.cor,
+          cliente_id: editingTime.cliente_id || null,
+        })
         .eq("id", editingTime.id);
 
       if (error) throw error;
@@ -176,6 +187,25 @@ export function GestaoTimes({ times }: GestaoTimesProps) {
               ))}
             </div>
           </div>
+          <div className="space-y-2">
+            <Label className="text-foreground flex items-center gap-1">
+              <Building2 className="h-4 w-4" />
+              Cliente Vinculado
+            </Label>
+            <Select value={novoClienteId} onValueChange={setNovoClienteId}>
+              <SelectTrigger className="w-48 bg-secondary border-border">
+                <SelectValue placeholder="Selecione..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">Nenhum</SelectItem>
+                {clientes?.filter(c => c.ativo).map(cliente => (
+                  <SelectItem key={cliente.id} value={cliente.id}>
+                    {cliente.nome}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
           <Button
             onClick={handleAddTime}
             disabled={isAdding}
@@ -192,6 +222,7 @@ export function GestaoTimes({ times }: GestaoTimesProps) {
             <TableHeader>
               <TableRow className="border-border hover:bg-secondary/50">
                 <TableHead className="text-muted-foreground">Time</TableHead>
+                <TableHead className="text-muted-foreground">Cliente Vinculado</TableHead>
                 <TableHead className="text-muted-foreground">Status</TableHead>
                 <TableHead className="text-muted-foreground text-right">Ações</TableHead>
               </TableRow>
@@ -199,27 +230,39 @@ export function GestaoTimes({ times }: GestaoTimesProps) {
             <TableBody>
               {times.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={3} className="text-center text-muted-foreground py-8">
+                  <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
                     Nenhum time cadastrado
                   </TableCell>
                 </TableRow>
               ) : (
-                times.map((time) => (
-                  <TableRow key={time.id} className="border-border hover:bg-secondary/50">
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <div 
-                          className="w-4 h-4 rounded-full" 
-                          style={{ backgroundColor: time.cor }}
-                        />
-                        <span className="text-foreground font-medium">{time.nome}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={time.ativo ? "default" : "secondary"}>
-                        {time.ativo ? "Ativo" : "Inativo"}
-                      </Badge>
-                    </TableCell>
+                times.map((time) => {
+                  const clienteNome = clientes?.find(c => c.id === time.cliente_id)?.nome;
+                  return (
+                    <TableRow key={time.id} className="border-border hover:bg-secondary/50">
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <div 
+                            className="w-4 h-4 rounded-full" 
+                            style={{ backgroundColor: time.cor }}
+                          />
+                          <span className="text-foreground font-medium">{time.nome}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {clienteNome ? (
+                          <Badge variant="outline" className="gap-1">
+                            <Building2 className="h-3 w-3" />
+                            {clienteNome}
+                          </Badge>
+                        ) : (
+                          <span className="text-muted-foreground text-sm">-</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={time.ativo ? "default" : "secondary"}>
+                          {time.ativo ? "Ativo" : "Inativo"}
+                        </Badge>
+                      </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1">
                         <Button
@@ -268,8 +311,9 @@ export function GestaoTimes({ times }: GestaoTimesProps) {
                         </AlertDialog>
                       </div>
                     </TableCell>
-                  </TableRow>
-                ))
+                    </TableRow>
+                  );
+                })
               )}
             </TableBody>
           </Table>
@@ -307,6 +351,28 @@ export function GestaoTimes({ times }: GestaoTimesProps) {
                     />
                   ))}
                 </div>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-foreground flex items-center gap-1">
+                  <Building2 className="h-4 w-4" />
+                  Cliente Vinculado
+                </Label>
+                <Select 
+                  value={editingTime.cliente_id || ""} 
+                  onValueChange={(value) => setEditingTime({ ...editingTime, cliente_id: value || null })}
+                >
+                  <SelectTrigger className="bg-secondary border-border">
+                    <SelectValue placeholder="Selecione..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Nenhum</SelectItem>
+                    {clientes?.filter(c => c.ativo).map(cliente => (
+                      <SelectItem key={cliente.id} value={cliente.id}>
+                        {cliente.nome}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
           )}

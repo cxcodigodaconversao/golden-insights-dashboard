@@ -14,8 +14,48 @@ export type Database = {
   }
   public: {
     Tables: {
+      access_logs: {
+        Row: {
+          action: string
+          created_at: string
+          details: Json | null
+          id: string
+          ip_address: string | null
+          resource_id: string | null
+          resource_type: string
+          user_id: string
+          user_name: string
+          user_role: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          ip_address?: string | null
+          resource_id?: string | null
+          resource_type: string
+          user_id: string
+          user_name: string
+          user_role: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          ip_address?: string | null
+          resource_id?: string | null
+          resource_type?: string
+          user_id?: string
+          user_name?: string
+          user_role?: string
+        }
+        Relationships: []
+      }
       atendimentos: {
         Row: {
+          cliente_id: string | null
           closer: string
           created_at: string
           data_call: string
@@ -36,6 +76,7 @@ export type Database = {
           valor: number | null
         }
         Insert: {
+          cliente_id?: string | null
           closer: string
           created_at?: string
           data_call?: string
@@ -56,6 +97,7 @@ export type Database = {
           valor?: number | null
         }
         Update: {
+          cliente_id?: string | null
           closer?: string
           created_at?: string
           data_call?: string
@@ -76,6 +118,13 @@ export type Database = {
           valor?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "atendimentos_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "atendimentos_lead_id_fkey"
             columns: ["lead_id"]
@@ -124,6 +173,39 @@ export type Database = {
           user_id?: string
           user_name?: string
           user_role?: string
+        }
+        Relationships: []
+      }
+      clientes: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          email: string | null
+          empresa: string | null
+          id: string
+          nome: string
+          telefone: string | null
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          email?: string | null
+          empresa?: string | null
+          id?: string
+          nome: string
+          telefone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          email?: string | null
+          empresa?: string | null
+          id?: string
+          nome?: string
+          telefone?: string | null
+          updated_at?: string
         }
         Relationships: []
       }
@@ -402,38 +484,114 @@ export type Database = {
           },
         ]
       }
+      lead_ownership_history: {
+        Row: {
+          created_at: string
+          id: string
+          lead_id: string
+          new_owner_id: string | null
+          new_owner_name: string | null
+          new_owner_type: string | null
+          previous_owner_id: string | null
+          previous_owner_name: string | null
+          previous_owner_type: string | null
+          reason: string | null
+          transferred_by: string
+          transferred_by_name: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          lead_id: string
+          new_owner_id?: string | null
+          new_owner_name?: string | null
+          new_owner_type?: string | null
+          previous_owner_id?: string | null
+          previous_owner_name?: string | null
+          previous_owner_type?: string | null
+          reason?: string | null
+          transferred_by: string
+          transferred_by_name: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          lead_id?: string
+          new_owner_id?: string | null
+          new_owner_name?: string | null
+          new_owner_type?: string | null
+          previous_owner_id?: string | null
+          previous_owner_name?: string | null
+          previous_owner_type?: string | null
+          reason?: string | null
+          transferred_by?: string
+          transferred_by_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_ownership_history_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       leads: {
         Row: {
+          cliente_id: string | null
           created_at: string | null
+          deleted_at: string | null
+          deleted_by: string | null
           email: string | null
           id: string
           nome: string
           origem_primeira: string | null
+          owner_id: string | null
+          owner_type: string | null
           sdr_primeiro: string | null
           telefone: string | null
           updated_at: string | null
         }
         Insert: {
+          cliente_id?: string | null
           created_at?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
           email?: string | null
           id?: string
           nome: string
           origem_primeira?: string | null
+          owner_id?: string | null
+          owner_type?: string | null
           sdr_primeiro?: string | null
           telefone?: string | null
           updated_at?: string | null
         }
         Update: {
+          cliente_id?: string | null
           created_at?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
           email?: string | null
           id?: string
           nome?: string
           origem_primeira?: string | null
+          owner_id?: string | null
+          owner_type?: string | null
           sdr_primeiro?: string | null
           telefone?: string | null
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "leads_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       lideres_comerciais: {
         Row: {
@@ -599,6 +757,7 @@ export type Database = {
       profiles: {
         Row: {
           ativo: boolean
+          cliente_id: string | null
           closer_id: string | null
           created_at: string
           email: string
@@ -609,6 +768,7 @@ export type Database = {
         }
         Insert: {
           ativo?: boolean
+          cliente_id?: string | null
           closer_id?: string | null
           created_at?: string
           email: string
@@ -619,6 +779,7 @@ export type Database = {
         }
         Update: {
           ativo?: boolean
+          cliente_id?: string | null
           closer_id?: string | null
           created_at?: string
           email?: string
@@ -628,6 +789,13 @@ export type Database = {
           time_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "profiles_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "profiles_closer_id_fkey"
             columns: ["closer_id"]
@@ -686,6 +854,7 @@ export type Database = {
       times: {
         Row: {
           ativo: boolean
+          cliente_id: string | null
           cor: string | null
           created_at: string
           id: string
@@ -693,6 +862,7 @@ export type Database = {
         }
         Insert: {
           ativo?: boolean
+          cliente_id?: string | null
           cor?: string | null
           created_at?: string
           id?: string
@@ -700,12 +870,21 @@ export type Database = {
         }
         Update: {
           ativo?: boolean
+          cliente_id?: string | null
           cor?: string | null
           created_at?: string
           id?: string
           nome?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "times_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
@@ -774,6 +953,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_user_cliente_id: { Args: { _user_id: string }; Returns: string }
       get_user_role: { Args: { _user_id: string }; Returns: string }
       get_user_team_id: { Args: { _user_id: string }; Returns: string }
       has_role: {
@@ -783,9 +963,14 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_in_team: {
+        Args: { _team_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_team_leader: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
-      app_role: "admin" | "user" | "lider" | "vendedor" | "sdr"
+      app_role: "admin" | "user" | "lider" | "vendedor" | "sdr" | "cliente"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -913,7 +1098,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "user", "lider", "vendedor", "sdr"],
+      app_role: ["admin", "user", "lider", "vendedor", "sdr", "cliente"],
     },
   },
 } as const

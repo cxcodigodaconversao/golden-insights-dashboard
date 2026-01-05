@@ -1,4 +1,4 @@
-import { TrendingUp, LogOut, Shield, Crown, User, Headphones } from "lucide-react";
+import { TrendingUp, LogOut, Shield, Crown, User, Headphones, Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth, AppRole } from "@/hooks/useAuth";
 import { Badge } from "@/components/ui/badge";
@@ -8,6 +8,7 @@ const roleConfig: Record<AppRole, { label: string; icon: typeof Shield; color: s
   lider: { label: 'Líder', icon: Crown, color: 'bg-blue-600' },
   vendedor: { label: 'Vendedor', icon: User, color: 'bg-green-600' },
   sdr: { label: 'SDR', icon: Headphones, color: 'bg-orange-600' },
+  cliente: { label: 'Cliente', icon: Building2, color: 'bg-teal-600' },
   user: { label: 'Usuário', icon: User, color: 'bg-gray-600' },
 };
 

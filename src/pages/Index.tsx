@@ -5,6 +5,7 @@ import { TeamFilter } from "@/components/Dashboard/TeamFilter";
 import { AdvancedFilters } from "@/components/Dashboard/AdvancedFilters";
 import { DashboardContent } from "@/components/Dashboard/DashboardContent";
 import { MeuDashboard } from "@/components/Dashboard/MeuDashboard";
+import { ClienteDashboard } from "@/components/Dashboard/ClienteDashboard";
 import { AtendimentoForm } from "@/components/Dashboard/AtendimentoForm";
 import { GestaoClosers } from "@/components/Dashboard/GestaoClosers";
 import { GestaoSDRs } from "@/components/Dashboard/GestaoSDRs";
@@ -12,6 +13,7 @@ import { GestaoOrigens } from "@/components/Dashboard/GestaoOrigens";
 import { GestaoTimes } from "@/components/Dashboard/GestaoTimes";
 import { GestaoLideres } from "@/components/Dashboard/GestaoLideres";
 import { GestaoUsuarios } from "@/components/Dashboard/GestaoUsuarios";
+import { GestaoClientes } from "@/components/Dashboard/GestaoClientes";
 import { GestaoMetas } from "@/components/Dashboard/GestaoMetas";
 import { GestaoNotificacoes } from "@/components/Dashboard/GestaoNotificacoes";
 import { ResumoMetas } from "@/components/Dashboard/ResumoMetas";
@@ -23,12 +25,12 @@ import { ExportExcel } from "@/components/Dashboard/ExportExcel";
 import { useAtendimentos, useClosers, useSdrs, useOrigens, useTimes, useLideres } from "@/hooks/useAtendimentos";
 import { useAuth } from "@/hooks/useAuth";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { LayoutDashboard, PlusCircle, Users, Headphones, Globe, FileSpreadsheet, Calendar, Shield, Crown, UserCog, Target, Bell, BarChart3, DollarSign } from "lucide-react";
+import { LayoutDashboard, PlusCircle, Users, Headphones, Globe, FileSpreadsheet, Calendar, Shield, Crown, UserCog, Target, Bell, BarChart3, DollarSign, Building2 } from "lucide-react";
 import { startOfMonth, endOfMonth, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 const Index = () => {
-  const { isAdmin, isLider, isVendedor, isSdr, profile } = useAuth();
+  const { isAdmin, isLider, isVendedor, isSdr, isCliente, profile } = useAuth();
   const [periodType, setPeriodType] = useState<PeriodType>("custom");
   const [dateRange, setDateRange] = useState({
     start: startOfMonth(new Date()),
@@ -165,6 +167,7 @@ const Index = () => {
 
   // Permissões por perfil:
   // - Admin: acesso completo
+  // - Cliente: apenas dashboard da operação
   // - Líder: dashboard, resumo, cadastrar, lançamentos, metas (da equipe)
   // - Vendedor/SDR: apenas dashboard e resumo metas (próprios resultados)
   const canSeeDashboard = true;
@@ -172,13 +175,15 @@ const Index = () => {
   const canSeeCadastrar = isAdmin || isLider;
   const canSeeLancamentos = isAdmin || isLider || isVendedor || isSdr;
   const canSeeMetas = isAdmin;
-  const canSeeResumoMetas = true;
-  const canSeeComissoes = true;
+  const canSeeResumoMetas = !isCliente;
+  const canSeeComissoes = !isCliente;
   const canSeeNotificacoes = isAdmin;
   const canSeeGestao = isAdmin;
   const canSeeUsuarios = isAdmin;
+  const canSeeClientes = isAdmin;
 
   // Determine if user should see individual dashboard
+  const showClienteDashboard = isCliente;
   const showIndividualDashboard = (isVendedor && profile?.closer_id) || (isSdr && profile?.sdr_id);
   const userReferenciaNome = useMemo(() => {
     if (isVendedor && profile?.closer_id) {
@@ -245,6 +250,12 @@ const Index = () => {
                     <span className="hidden sm:inline">Origens</span>
                   </TabsTrigger>
                 </>
+              )}
+              {canSeeClientes && (
+                <TabsTrigger value="clientes" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2">
+                  <Building2 className="h-4 w-4" />
+                  <span className="hidden sm:inline">Clientes</span>
+                </TabsTrigger>
               )}
               {canSeeMetas && (
                 <TabsTrigger value="metas" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2">
@@ -316,7 +327,9 @@ const Index = () => {
               </div>
             </div>
             
-            {showIndividualDashboard ? (
+            {showClienteDashboard ? (
+              <ClienteDashboard />
+            ) : showIndividualDashboard ? (
               <MeuDashboard
                 atendimentos={filteredAtendimentos}
                 tipo={isVendedor ? "closer" : "sdr"}
@@ -413,6 +426,16 @@ const Index = () => {
                 <GestaoOrigens origens={allOrigens} />
               </TabsContent>
             </>
+          )}
+
+          {canSeeClientes && (
+            <TabsContent value="clientes" className="space-y-6">
+              <div className="opacity-0 animate-fade-in">
+                <h2 className="font-display text-2xl sm:text-3xl font-bold text-foreground">Clientes/Contratantes</h2>
+                <p className="text-sm text-muted-foreground">Gerencie os clientes que contratam operações</p>
+              </div>
+              <GestaoClientes />
+            </TabsContent>
           )}
 
           {canSeeMetas && (
