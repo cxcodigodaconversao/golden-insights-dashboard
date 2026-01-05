@@ -8,6 +8,11 @@ export interface Lead {
   email: string | null;
   origem_primeira: string | null;
   sdr_primeiro: string | null;
+  cliente_id: string | null;
+  owner_id: string | null;
+  owner_type: string | null;
+  deleted_at: string | null;
+  deleted_by: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -25,6 +30,7 @@ export interface HistoricoInteracao {
   created_at: string;
 }
 
+// Buscar apenas leads ativos (não deletados)
 export function useLeads() {
   return useQuery({
     queryKey: ["leads"],
@@ -32,10 +38,44 @@ export function useLeads() {
       const { data, error } = await supabase
         .from("leads")
         .select("*")
+        .is("deleted_at", null)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
       return data as Lead[];
+    },
+  });
+}
+
+// Buscar leads na lixeira (deletados)
+export function useDeletedLeads() {
+  return useQuery({
+    queryKey: ["leads", "deleted"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("leads")
+        .select("*")
+        .not("deleted_at", "is", null)
+        .order("deleted_at", { ascending: false });
+
+      if (error) throw error;
+      return data as Lead[];
+    },
+  });
+}
+
+// Contagem de leads na lixeira
+export function useDeletedLeadsCount() {
+  return useQuery({
+    queryKey: ["leads", "deleted", "count"],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("leads")
+        .select("*", { count: "exact", head: true })
+        .not("deleted_at", "is", null);
+
+      if (error) throw error;
+      return count || 0;
     },
   });
 }
@@ -89,7 +129,7 @@ export function useFindOrCreateLead() {
       origem?: string | null;
       sdr?: string | null;
     }) => {
-      // Tentar encontrar lead existente por telefone ou email
+      // Tentar encontrar lead existente por telefone ou email (apenas ativos)
       let existingLead = null;
 
       if (params.telefone) {
@@ -97,6 +137,7 @@ export function useFindOrCreateLead() {
           .from("leads")
           .select("*")
           .eq("telefone", params.telefone)
+          .is("deleted_at", null)
           .maybeSingle();
         existingLead = data;
       }
@@ -106,6 +147,7 @@ export function useFindOrCreateLead() {
           .from("leads")
           .select("*")
           .eq("email", params.email)
+          .is("deleted_at", null)
           .maybeSingle();
         existingLead = data;
       }
@@ -132,6 +174,142 @@ export function useFindOrCreateLead() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["leads"] });
+    },
+  });
+}
+
+// Soft delete - move lead para lixeira
+export function useSoftDeleteLead() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (params: { leadId: string; deletedBy: string }) => {
+      const { error } = await supabase
+        .from("leads")
+        .update({
+          deleted_at: new Date().toISOString(),
+          deleted_by: params.deletedBy,
+        })
+        .eq("id", params.leadId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["leads"] });
+      queryClient.invalidateQueries({ queryKey: ["leads", "deleted"] });
+      queryClient.invalidateQueries({ queryKey: ["leads", "deleted", "count"] });
+    },
+  });
+}
+
+// Restaurar lead da lixeira
+export function useRestoreLead() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (leadId: string) => {
+      const { error } = await supabase
+        .from("leads")
+        .update({
+          deleted_at: null,
+          deleted_by: null,
+        })
+        .eq("id", leadId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["leads"] });
+      queryClient.invalidateQueries({ queryKey: ["leads", "deleted"] });
+      queryClient.invalidateQueries({ queryKey: ["leads", "deleted", "count"] });
+    },
+  });
+}
+
+// Hard delete - exclusão permanente (apenas admin)
+export function useHardDeleteLead() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (leadId: string) => {
+      // Primeiro deletar registros relacionados
+      await supabase
+        .from("historico_interacoes")
+        .delete()
+        .eq("lead_id", leadId);
+
+      await supabase
+        .from("lead_ownership_history")
+        .delete()
+        .eq("lead_id", leadId);
+
+      // Remover referência em atendimentos
+      await supabase
+        .from("atendimentos")
+        .update({ lead_id: null })
+        .eq("lead_id", leadId);
+
+      // Finalmente deletar o lead
+      const { error } = await supabase
+        .from("leads")
+        .delete()
+        .eq("id", leadId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["leads"] });
+      queryClient.invalidateQueries({ queryKey: ["leads", "deleted"] });
+      queryClient.invalidateQueries({ queryKey: ["leads", "deleted", "count"] });
+    },
+  });
+}
+
+// Esvaziar lixeira (exclusão permanente em massa)
+export function useEmptyTrash() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async () => {
+      // Buscar todos os leads deletados
+      const { data: deletedLeads } = await supabase
+        .from("leads")
+        .select("id")
+        .not("deleted_at", "is", null);
+
+      if (!deletedLeads || deletedLeads.length === 0) return;
+
+      const leadIds = deletedLeads.map(l => l.id);
+
+      // Deletar registros relacionados
+      await supabase
+        .from("historico_interacoes")
+        .delete()
+        .in("lead_id", leadIds);
+
+      await supabase
+        .from("lead_ownership_history")
+        .delete()
+        .in("lead_id", leadIds);
+
+      // Remover referências em atendimentos
+      await supabase
+        .from("atendimentos")
+        .update({ lead_id: null })
+        .in("lead_id", leadIds);
+
+      // Deletar leads
+      const { error } = await supabase
+        .from("leads")
+        .delete()
+        .in("id", leadIds);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["leads"] });
+      queryClient.invalidateQueries({ queryKey: ["leads", "deleted"] });
+      queryClient.invalidateQueries({ queryKey: ["leads", "deleted", "count"] });
     },
   });
 }

@@ -22,12 +22,16 @@ import { LancamentoSDRPage } from "@/components/Dashboard/LancamentoSDRPage";
 import { ResumoSemanal } from "@/components/Dashboard/ResumoSemanal";
 import { ImportExcel } from "@/components/Dashboard/ImportExcel";
 import { ExportExcel } from "@/components/Dashboard/ExportExcel";
+import { LixeiraLeads } from "@/components/Dashboard/LixeiraLeads";
 import { useAtendimentos, useClosers, useSdrs, useOrigens, useTimes, useLideres } from "@/hooks/useAtendimentos";
 import { useAuth } from "@/hooks/useAuth";
+import { useDeletedLeadsCount } from "@/hooks/useLeads";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { LayoutDashboard, PlusCircle, Users, Headphones, Globe, FileSpreadsheet, Calendar, Shield, Crown, UserCog, Target, Bell, BarChart3, DollarSign, Building2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { LayoutDashboard, PlusCircle, Users, Headphones, Globe, FileSpreadsheet, Calendar, Shield, Crown, UserCog, Target, Bell, BarChart3, DollarSign, Building2, Trash2 } from "lucide-react";
 import { startOfMonth, endOfMonth, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+
 const Index = () => {
   const {
     isAdmin,
@@ -85,6 +89,9 @@ const Index = () => {
   const {
     data: allLideres = []
   } = useLideres(true);
+  
+  // Count of deleted leads for trash badge
+  const { data: deletedLeadsCount = 0 } = useDeletedLeadsCount();
 
   // Determine which team to use based on role
   const effectiveTeamFilter = useMemo(() => {
@@ -208,6 +215,7 @@ const Index = () => {
   const canSeeGestao = isAdmin;
   const canSeeUsuarios = isAdmin;
   const canSeeClientes = isAdmin;
+  const canSeeLixeira = isAdmin;
 
   // Determine if user should see individual dashboard
   const showClienteDashboard = isCliente;
@@ -291,6 +299,15 @@ const Index = () => {
               {canSeeUsuarios && <TabsTrigger value="usuarios" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2">
                   <UserCog className="h-4 w-4" />
                   <span className="hidden sm:inline">Usuários</span>
+                </TabsTrigger>}
+              {canSeeLixeira && <TabsTrigger value="lixeira" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2 relative">
+                  <Trash2 className="h-4 w-4" />
+                  <span className="hidden sm:inline">Lixeira</span>
+                  {deletedLeadsCount > 0 && (
+                    <Badge variant="destructive" className="absolute -top-1 -right-1 h-4 w-4 p-0 flex items-center justify-center text-[10px]">
+                      {deletedLeadsCount > 9 ? "9+" : deletedLeadsCount}
+                    </Badge>
+                  )}
                 </TabsTrigger>}
             </TabsList>
             
@@ -448,6 +465,14 @@ const Index = () => {
                 <p className="text-sm text-muted-foreground">Gerencie os usuários do sistema</p>
               </div>
               <GestaoUsuarios />
+            </TabsContent>}
+
+          {canSeeLixeira && <TabsContent value="lixeira" className="space-y-6">
+              <div className="opacity-0 animate-fade-in">
+                <h2 className="font-display text-2xl sm:text-3xl font-bold text-foreground">Lixeira de Leads</h2>
+                <p className="text-sm text-muted-foreground">Restaure ou exclua permanentemente os leads removidos</p>
+              </div>
+              <LixeiraLeads />
             </TabsContent>}
         </Tabs>
       </main>
