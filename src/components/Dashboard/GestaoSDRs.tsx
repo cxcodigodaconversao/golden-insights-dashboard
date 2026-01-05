@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { Plus, UserCheck, UserX, Pencil, Trash2 } from "lucide-react";
+import { Plus, UserCheck, UserX, Pencil, Trash2, Percent, Gift } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -20,8 +20,17 @@ interface Time {
   ativo: boolean;
 }
 
+interface SDR {
+  id: string;
+  nome: string;
+  ativo: boolean;
+  time_id?: string | null;
+  comissao_percentual?: number | null;
+  bonus_extra?: number | null;
+}
+
 interface GestaoSDRsProps {
-  sdrs: { id: string; nome: string; ativo: boolean; time_id?: string | null }[];
+  sdrs: SDR[];
   times?: Time[];
 }
 
@@ -29,8 +38,10 @@ export function GestaoSDRs({ sdrs, times = [] }: GestaoSDRsProps) {
   const queryClient = useQueryClient();
   const [novoSdr, setNovoSdr] = useState("");
   const [novoTimeId, setNovoTimeId] = useState<string>("");
+  const [novaComissao, setNovaComissao] = useState<string>("");
+  const [novoBonus, setNovoBonus] = useState<string>("");
   const [isAdding, setIsAdding] = useState(false);
-  const [editingSdr, setEditingSdr] = useState<{ id: string; nome: string; time_id?: string | null } | null>(null);
+  const [editingSdr, setEditingSdr] = useState<SDR | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -40,6 +51,16 @@ export function GestaoSDRs({ sdrs, times = [] }: GestaoSDRsProps) {
   };
 
   const timesAtivos = times.filter(t => t.ativo);
+
+  const formatCurrency = (value: number | null | undefined) => {
+    if (!value) return "R$ 0,00";
+    return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  };
+
+  const formatPercent = (value: number | null | undefined) => {
+    if (!value) return "0%";
+    return `${value}%`;
+  };
 
   const handleAddSdr = async () => {
     if (!novoSdr.trim()) {
@@ -51,7 +72,9 @@ export function GestaoSDRs({ sdrs, times = [] }: GestaoSDRsProps) {
     try {
       const { error } = await supabase.from("sdrs").insert({ 
         nome: novoSdr.trim(),
-        time_id: novoTimeId || null
+        time_id: novoTimeId || null,
+        comissao_percentual: novaComissao ? parseFloat(novaComissao) : 0,
+        bonus_extra: novoBonus ? parseFloat(novoBonus) : 0
       });
       if (error) throw error;
 
@@ -59,6 +82,8 @@ export function GestaoSDRs({ sdrs, times = [] }: GestaoSDRsProps) {
       queryClient.invalidateQueries({ queryKey: ["sdrs"] });
       setNovoSdr("");
       setNovoTimeId("");
+      setNovaComissao("");
+      setNovoBonus("");
     } catch (error: any) {
       if (error.code === "23505") {
         toast.error("Este SDR já existe");
@@ -85,7 +110,7 @@ export function GestaoSDRs({ sdrs, times = [] }: GestaoSDRsProps) {
     }
   };
 
-  const handleEdit = (sdr: { id: string; nome: string; time_id?: string | null }) => {
+  const handleEdit = (sdr: SDR) => {
     setEditingSdr({ ...sdr });
     setIsEditDialogOpen(true);
   };
@@ -102,7 +127,9 @@ export function GestaoSDRs({ sdrs, times = [] }: GestaoSDRsProps) {
         .from("sdrs")
         .update({ 
           nome: editingSdr.nome.trim(),
-          time_id: editingSdr.time_id || null
+          time_id: editingSdr.time_id || null,
+          comissao_percentual: editingSdr.comissao_percentual || 0,
+          bonus_extra: editingSdr.bonus_extra || 0
         })
         .eq("id", editingSdr.id);
 
@@ -184,6 +211,35 @@ export function GestaoSDRs({ sdrs, times = [] }: GestaoSDRsProps) {
               </Select>
             </div>
           )}
+          <div className="space-y-2">
+            <Label className="text-foreground flex items-center gap-1">
+              <Percent className="h-3 w-3" /> Comissão (%)
+            </Label>
+            <Input
+              type="number"
+              step="0.01"
+              min="0"
+              max="100"
+              value={novaComissao}
+              onChange={(e) => setNovaComissao(e.target.value)}
+              placeholder="0"
+              className="bg-secondary border-border w-28"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label className="text-foreground flex items-center gap-1">
+              <Gift className="h-3 w-3" /> Bônus Extra (R$)
+            </Label>
+            <Input
+              type="number"
+              step="0.01"
+              min="0"
+              value={novoBonus}
+              onChange={(e) => setNovoBonus(e.target.value)}
+              placeholder="0"
+              className="bg-secondary border-border w-32"
+            />
+          </div>
           <Button
             onClick={handleAddSdr}
             disabled={isAdding}
@@ -201,6 +257,8 @@ export function GestaoSDRs({ sdrs, times = [] }: GestaoSDRsProps) {
               <TableRow className="border-border hover:bg-secondary/50">
                 <TableHead className="text-muted-foreground">Nome</TableHead>
                 <TableHead className="text-muted-foreground">Time</TableHead>
+                <TableHead className="text-muted-foreground">Comissão</TableHead>
+                <TableHead className="text-muted-foreground">Bônus Extra</TableHead>
                 <TableHead className="text-muted-foreground">Status</TableHead>
                 <TableHead className="text-muted-foreground text-right">Ações</TableHead>
               </TableRow>
@@ -208,7 +266,7 @@ export function GestaoSDRs({ sdrs, times = [] }: GestaoSDRsProps) {
             <TableBody>
               {sdrs.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
+                  <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
                     Nenhum SDR cadastrado
                   </TableCell>
                 </TableRow>
@@ -233,6 +291,12 @@ export function GestaoSDRs({ sdrs, times = [] }: GestaoSDRsProps) {
                         ) : (
                           <span className="text-muted-foreground text-sm">-</span>
                         )}
+                      </TableCell>
+                      <TableCell className="text-foreground">
+                        {formatPercent(sdr.comissao_percentual)}
+                      </TableCell>
+                      <TableCell className="text-foreground">
+                        {formatCurrency(sdr.bonus_extra)}
                       </TableCell>
                       <TableCell>
                         <Badge variant={sdr.ativo ? "default" : "secondary"}>
@@ -338,6 +402,37 @@ export function GestaoSDRs({ sdrs, times = [] }: GestaoSDRsProps) {
                   </Select>
                 </div>
               )}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-foreground flex items-center gap-1">
+                    <Percent className="h-3 w-3" /> Comissão (%)
+                  </Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    max="100"
+                    value={editingSdr.comissao_percentual || ""}
+                    onChange={(e) => setEditingSdr({ ...editingSdr, comissao_percentual: e.target.value ? parseFloat(e.target.value) : null })}
+                    className="bg-secondary border-border"
+                    placeholder="0"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-foreground flex items-center gap-1">
+                    <Gift className="h-3 w-3" /> Bônus Extra (R$)
+                  </Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={editingSdr.bonus_extra || ""}
+                    onChange={(e) => setEditingSdr({ ...editingSdr, bonus_extra: e.target.value ? parseFloat(e.target.value) : null })}
+                    className="bg-secondary border-border"
+                    placeholder="0"
+                  />
+                </div>
+              </div>
             </div>
           )}
           <DialogFooter>
