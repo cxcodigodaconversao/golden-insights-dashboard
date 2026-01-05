@@ -209,6 +209,75 @@ export type Database = {
         }
         Relationships: []
       }
+      clientes_pipeline: {
+        Row: {
+          closer_responsavel_id: string | null
+          closer_responsavel_nome: string | null
+          created_at: string | null
+          data_proximo_contato: string | null
+          email: string | null
+          empresa: string | null
+          etapa_atual: string
+          etapa_atualizada_em: string | null
+          id: string
+          nome: string
+          observacoes: string | null
+          origem_lead: string | null
+          proximo_passo: string | null
+          segmento: string | null
+          str_responsavel_id: string
+          str_responsavel_nome: string
+          temperatura: string | null
+          updated_at: string | null
+          valor_potencial: number | null
+          whatsapp: string
+        }
+        Insert: {
+          closer_responsavel_id?: string | null
+          closer_responsavel_nome?: string | null
+          created_at?: string | null
+          data_proximo_contato?: string | null
+          email?: string | null
+          empresa?: string | null
+          etapa_atual?: string
+          etapa_atualizada_em?: string | null
+          id?: string
+          nome: string
+          observacoes?: string | null
+          origem_lead?: string | null
+          proximo_passo?: string | null
+          segmento?: string | null
+          str_responsavel_id: string
+          str_responsavel_nome: string
+          temperatura?: string | null
+          updated_at?: string | null
+          valor_potencial?: number | null
+          whatsapp: string
+        }
+        Update: {
+          closer_responsavel_id?: string | null
+          closer_responsavel_nome?: string | null
+          created_at?: string | null
+          data_proximo_contato?: string | null
+          email?: string | null
+          empresa?: string | null
+          etapa_atual?: string
+          etapa_atualizada_em?: string | null
+          id?: string
+          nome?: string
+          observacoes?: string | null
+          origem_lead?: string | null
+          proximo_passo?: string | null
+          segmento?: string | null
+          str_responsavel_id?: string
+          str_responsavel_nome?: string
+          temperatura?: string | null
+          updated_at?: string | null
+          valor_potencial?: number | null
+          whatsapp?: string
+        }
+        Relationships: []
+      }
       closers: {
         Row: {
           ativo: boolean
@@ -375,6 +444,50 @@ export type Database = {
             columns: ["lead_id"]
             isOneToOne: false
             referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      historico_pipeline: {
+        Row: {
+          cliente_id: string
+          created_at: string | null
+          etapa_anterior: string | null
+          etapa_nova: string | null
+          id: string
+          nota: string | null
+          tipo: string
+          usuario_id: string
+          usuario_nome: string
+        }
+        Insert: {
+          cliente_id: string
+          created_at?: string | null
+          etapa_anterior?: string | null
+          etapa_nova?: string | null
+          id?: string
+          nota?: string | null
+          tipo: string
+          usuario_id: string
+          usuario_nome: string
+        }
+        Update: {
+          cliente_id?: string
+          created_at?: string | null
+          etapa_anterior?: string | null
+          etapa_nova?: string | null
+          id?: string
+          nota?: string | null
+          tipo?: string
+          usuario_id?: string
+          usuario_nome?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "historico_pipeline_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes_pipeline"
             referencedColumns: ["id"]
           },
         ]
@@ -910,6 +1023,27 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      segmentos: {
+        Row: {
+          ativo: boolean | null
+          created_at: string | null
+          id: string
+          nome: string
+        }
+        Insert: {
+          ativo?: boolean | null
+          created_at?: string | null
+          id?: string
+          nome: string
+        }
+        Update: {
+          ativo?: boolean | null
+          created_at?: string | null
+          id?: string
+          nome?: string
+        }
+        Relationships: []
       }
       times: {
         Row: {

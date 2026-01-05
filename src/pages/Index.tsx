@@ -23,12 +23,13 @@ import { ResumoSemanal } from "@/components/Dashboard/ResumoSemanal";
 import { ImportExcel } from "@/components/Dashboard/ImportExcel";
 import { ExportExcel } from "@/components/Dashboard/ExportExcel";
 import { LixeiraLeads } from "@/components/Dashboard/LixeiraLeads";
+import { PipelinePage } from "@/components/Pipeline/PipelinePage";
 import { useAtendimentos, useClosers, useSdrs, useOrigens, useTimes, useLideres } from "@/hooks/useAtendimentos";
 import { useAuth } from "@/hooks/useAuth";
 import { useDeletedLeadsCount } from "@/hooks/useLeads";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { LayoutDashboard, PlusCircle, Users, Headphones, Globe, FileSpreadsheet, Calendar, Shield, Crown, UserCog, Target, Bell, BarChart3, DollarSign, Building2, Trash2 } from "lucide-react";
+import { LayoutDashboard, PlusCircle, Users, Headphones, Globe, FileSpreadsheet, Calendar, Shield, Crown, UserCog, Target, Bell, BarChart3, DollarSign, Building2, Trash2, Columns3 } from "lucide-react";
 import { startOfMonth, endOfMonth, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -216,6 +217,7 @@ const Index = () => {
   const canSeeUsuarios = isAdmin;
   const canSeeClientes = isAdmin;
   const canSeeLixeira = isAdmin;
+  const canSeePipeline = isAdmin || isLider || isVendedor || isSdr;
 
   // Determine if user should see individual dashboard
   const showClienteDashboard = isCliente;
@@ -240,6 +242,10 @@ const Index = () => {
                 <LayoutDashboard className="h-4 w-4" />
                 <span className="hidden sm:inline">Dashboard</span>
               </TabsTrigger>
+              {canSeePipeline && <TabsTrigger value="pipeline" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2">
+                  <Columns3 className="h-4 w-4" />
+                  <span className="hidden sm:inline">Pipeline</span>
+                </TabsTrigger>}
               {canSeeResumo && <TabsTrigger value="resumo" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2">
                   <Calendar className="h-4 w-4" />
                   <span className="hidden sm:inline">Resumo</span>
@@ -341,6 +347,14 @@ const Index = () => {
             
             {showClienteDashboard ? <ClienteDashboard /> : showIndividualDashboard ? <MeuDashboard atendimentos={filteredAtendimentos} tipo={isVendedor ? "closer" : "sdr"} referenciaId={(isVendedor ? profile?.closer_id : profile?.sdr_id) || ""} referenciaNome={userReferenciaNome} dateRange={dateRange} /> : <DashboardContent atendimentos={filteredAtendimentos} closersList={closersList} sdrsList={sdrsList} dateRange={dateRange} isLoading={isLoading} times={allTimes} closers={filteredClosers} sdrs={filteredSdrs} />}
           </TabsContent>
+
+          {canSeePipeline && <TabsContent value="pipeline" className="space-y-6">
+              <div className="opacity-0 animate-fade-in">
+                <h2 className="font-display text-2xl sm:text-3xl font-bold text-foreground">Pipeline Comercial</h2>
+                <p className="text-sm text-muted-foreground">Gerencie seus leads e negociações</p>
+              </div>
+              <PipelinePage />
+            </TabsContent>}
 
           {canSeeResumo && <TabsContent value="resumo" className="space-y-6">
               <div className="opacity-0 animate-fade-in">
