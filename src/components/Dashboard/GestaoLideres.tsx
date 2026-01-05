@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { Plus, UserCheck, UserX, Pencil, Trash2, Crown } from "lucide-react";
+import { Plus, UserCheck, UserX, Pencil, Trash2, Crown, Percent, Gift } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -25,6 +25,8 @@ interface Lider {
   nome: string;
   time_id: string | null;
   ativo: boolean;
+  comissao_percentual?: number | null;
+  bonus_extra?: number | null;
 }
 
 interface GestaoLideresProps {
@@ -36,6 +38,8 @@ export function GestaoLideres({ lideres, times }: GestaoLideresProps) {
   const queryClient = useQueryClient();
   const [novoLider, setNovoLider] = useState("");
   const [novoTimeId, setNovoTimeId] = useState<string>("");
+  const [novaComissao, setNovaComissao] = useState<string>("");
+  const [novoBonus, setNovoBonus] = useState<string>("");
   const [isAdding, setIsAdding] = useState(false);
   const [editingLider, setEditingLider] = useState<Lider | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -45,6 +49,16 @@ export function GestaoLideres({ lideres, times }: GestaoLideresProps) {
     if (!timeId) return null;
     const time = times.find(t => t.id === timeId);
     return time ? time : null;
+  };
+
+  const formatCurrency = (value: number | null | undefined) => {
+    if (!value) return "R$ 0,00";
+    return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  };
+
+  const formatPercent = (value: number | null | undefined) => {
+    if (!value) return "0%";
+    return `${value}%`;
   };
 
   const handleAddLider = async () => {
@@ -57,7 +71,9 @@ export function GestaoLideres({ lideres, times }: GestaoLideresProps) {
     try {
       const { error } = await supabase.from("lideres_comerciais").insert({ 
         nome: novoLider.trim(),
-        time_id: novoTimeId || null
+        time_id: novoTimeId || null,
+        comissao_percentual: novaComissao ? parseFloat(novaComissao) : 0,
+        bonus_extra: novoBonus ? parseFloat(novoBonus) : 0
       });
       if (error) throw error;
 
@@ -65,6 +81,8 @@ export function GestaoLideres({ lideres, times }: GestaoLideresProps) {
       queryClient.invalidateQueries({ queryKey: ["lideres"] });
       setNovoLider("");
       setNovoTimeId("");
+      setNovaComissao("");
+      setNovoBonus("");
     } catch (error: any) {
       toast.error("Erro ao adicionar líder");
     } finally {
@@ -104,7 +122,9 @@ export function GestaoLideres({ lideres, times }: GestaoLideresProps) {
         .from("lideres_comerciais")
         .update({ 
           nome: editingLider.nome.trim(),
-          time_id: editingLider.time_id || null
+          time_id: editingLider.time_id || null,
+          comissao_percentual: editingLider.comissao_percentual || 0,
+          bonus_extra: editingLider.bonus_extra || 0
         })
         .eq("id", editingLider.id);
 
@@ -181,6 +201,35 @@ export function GestaoLideres({ lideres, times }: GestaoLideresProps) {
               </SelectContent>
             </Select>
           </div>
+          <div className="space-y-2">
+            <Label className="text-foreground flex items-center gap-1">
+              <Percent className="h-3 w-3" /> Comissão (%)
+            </Label>
+            <Input
+              type="number"
+              step="0.01"
+              min="0"
+              max="100"
+              value={novaComissao}
+              onChange={(e) => setNovaComissao(e.target.value)}
+              placeholder="0"
+              className="bg-secondary border-border w-28"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label className="text-foreground flex items-center gap-1">
+              <Gift className="h-3 w-3" /> Bônus Extra (R$)
+            </Label>
+            <Input
+              type="number"
+              step="0.01"
+              min="0"
+              value={novoBonus}
+              onChange={(e) => setNovoBonus(e.target.value)}
+              placeholder="0"
+              className="bg-secondary border-border w-32"
+            />
+          </div>
           <Button
             onClick={handleAddLider}
             disabled={isAdding}
@@ -198,6 +247,8 @@ export function GestaoLideres({ lideres, times }: GestaoLideresProps) {
               <TableRow className="border-border hover:bg-secondary/50">
                 <TableHead className="text-muted-foreground">Nome</TableHead>
                 <TableHead className="text-muted-foreground">Time</TableHead>
+                <TableHead className="text-muted-foreground">Comissão</TableHead>
+                <TableHead className="text-muted-foreground">Bônus Extra</TableHead>
                 <TableHead className="text-muted-foreground">Status</TableHead>
                 <TableHead className="text-muted-foreground text-right">Ações</TableHead>
               </TableRow>
@@ -205,7 +256,7 @@ export function GestaoLideres({ lideres, times }: GestaoLideresProps) {
             <TableBody>
               {lideres.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
+                  <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
                     Nenhum líder cadastrado
                   </TableCell>
                 </TableRow>
@@ -235,6 +286,12 @@ export function GestaoLideres({ lideres, times }: GestaoLideresProps) {
                         ) : (
                           <span className="text-muted-foreground text-sm">Sem time</span>
                         )}
+                      </TableCell>
+                      <TableCell className="text-foreground">
+                        {formatPercent(lider.comissao_percentual)}
+                      </TableCell>
+                      <TableCell className="text-foreground">
+                        {formatCurrency(lider.bonus_extra)}
                       </TableCell>
                       <TableCell>
                         <Badge variant={lider.ativo ? "default" : "secondary"}>
@@ -337,6 +394,37 @@ export function GestaoLideres({ lideres, times }: GestaoLideresProps) {
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-foreground flex items-center gap-1">
+                    <Percent className="h-3 w-3" /> Comissão (%)
+                  </Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    max="100"
+                    value={editingLider.comissao_percentual || ""}
+                    onChange={(e) => setEditingLider({ ...editingLider, comissao_percentual: e.target.value ? parseFloat(e.target.value) : null })}
+                    className="bg-secondary border-border"
+                    placeholder="0"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-foreground flex items-center gap-1">
+                    <Gift className="h-3 w-3" /> Bônus Extra (R$)
+                  </Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={editingLider.bonus_extra || ""}
+                    onChange={(e) => setEditingLider({ ...editingLider, bonus_extra: e.target.value ? parseFloat(e.target.value) : null })}
+                    className="bg-secondary border-border"
+                    placeholder="0"
+                  />
+                </div>
               </div>
             </div>
           )}

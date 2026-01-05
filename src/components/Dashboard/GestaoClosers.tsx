@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { Plus, UserCheck, UserX, Pencil, Trash2 } from "lucide-react";
+import { Plus, UserCheck, UserX, Pencil, Trash2, Percent, Gift } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -20,8 +20,17 @@ interface Time {
   ativo: boolean;
 }
 
+interface Closer {
+  id: string;
+  nome: string;
+  ativo: boolean;
+  time_id?: string | null;
+  comissao_percentual?: number | null;
+  bonus_extra?: number | null;
+}
+
 interface GestaoClosersProps {
-  closers: { id: string; nome: string; ativo: boolean; time_id?: string | null }[];
+  closers: Closer[];
   times?: Time[];
 }
 
@@ -29,8 +38,10 @@ export function GestaoClosers({ closers, times = [] }: GestaoClosersProps) {
   const queryClient = useQueryClient();
   const [novoCloser, setNovoCloser] = useState("");
   const [novoTimeId, setNovoTimeId] = useState<string>("");
+  const [novaComissao, setNovaComissao] = useState<string>("");
+  const [novoBonus, setNovoBonus] = useState<string>("");
   const [isAdding, setIsAdding] = useState(false);
-  const [editingCloser, setEditingCloser] = useState<{ id: string; nome: string; time_id?: string | null } | null>(null);
+  const [editingCloser, setEditingCloser] = useState<Closer | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -40,6 +51,16 @@ export function GestaoClosers({ closers, times = [] }: GestaoClosersProps) {
   };
 
   const timesAtivos = times.filter(t => t.ativo);
+
+  const formatCurrency = (value: number | null | undefined) => {
+    if (!value) return "R$ 0,00";
+    return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  };
+
+  const formatPercent = (value: number | null | undefined) => {
+    if (!value) return "0%";
+    return `${value}%`;
+  };
 
   const handleAddCloser = async () => {
     if (!novoCloser.trim()) {
@@ -51,7 +72,9 @@ export function GestaoClosers({ closers, times = [] }: GestaoClosersProps) {
     try {
       const { error } = await supabase.from("closers").insert({ 
         nome: novoCloser.trim(),
-        time_id: novoTimeId || null
+        time_id: novoTimeId || null,
+        comissao_percentual: novaComissao ? parseFloat(novaComissao) : 0,
+        bonus_extra: novoBonus ? parseFloat(novoBonus) : 0
       });
       if (error) throw error;
 
@@ -59,6 +82,8 @@ export function GestaoClosers({ closers, times = [] }: GestaoClosersProps) {
       queryClient.invalidateQueries({ queryKey: ["closers"] });
       setNovoCloser("");
       setNovoTimeId("");
+      setNovaComissao("");
+      setNovoBonus("");
     } catch (error: any) {
       if (error.code === "23505") {
         toast.error("Este closer já existe");
@@ -85,7 +110,7 @@ export function GestaoClosers({ closers, times = [] }: GestaoClosersProps) {
     }
   };
 
-  const handleEdit = (closer: { id: string; nome: string; time_id?: string | null }) => {
+  const handleEdit = (closer: Closer) => {
     setEditingCloser({ ...closer });
     setIsEditDialogOpen(true);
   };
@@ -102,7 +127,9 @@ export function GestaoClosers({ closers, times = [] }: GestaoClosersProps) {
         .from("closers")
         .update({ 
           nome: editingCloser.nome.trim(),
-          time_id: editingCloser.time_id || null
+          time_id: editingCloser.time_id || null,
+          comissao_percentual: editingCloser.comissao_percentual || 0,
+          bonus_extra: editingCloser.bonus_extra || 0
         })
         .eq("id", editingCloser.id);
 
@@ -184,6 +211,35 @@ export function GestaoClosers({ closers, times = [] }: GestaoClosersProps) {
               </Select>
             </div>
           )}
+          <div className="space-y-2">
+            <Label className="text-foreground flex items-center gap-1">
+              <Percent className="h-3 w-3" /> Comissão (%)
+            </Label>
+            <Input
+              type="number"
+              step="0.01"
+              min="0"
+              max="100"
+              value={novaComissao}
+              onChange={(e) => setNovaComissao(e.target.value)}
+              placeholder="0"
+              className="bg-secondary border-border w-28"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label className="text-foreground flex items-center gap-1">
+              <Gift className="h-3 w-3" /> Bônus Extra (R$)
+            </Label>
+            <Input
+              type="number"
+              step="0.01"
+              min="0"
+              value={novoBonus}
+              onChange={(e) => setNovoBonus(e.target.value)}
+              placeholder="0"
+              className="bg-secondary border-border w-32"
+            />
+          </div>
           <Button
             onClick={handleAddCloser}
             disabled={isAdding}
@@ -201,6 +257,8 @@ export function GestaoClosers({ closers, times = [] }: GestaoClosersProps) {
               <TableRow className="border-border hover:bg-secondary/50">
                 <TableHead className="text-muted-foreground">Nome</TableHead>
                 <TableHead className="text-muted-foreground">Time</TableHead>
+                <TableHead className="text-muted-foreground">Comissão</TableHead>
+                <TableHead className="text-muted-foreground">Bônus Extra</TableHead>
                 <TableHead className="text-muted-foreground">Status</TableHead>
                 <TableHead className="text-muted-foreground text-right">Ações</TableHead>
               </TableRow>
@@ -208,7 +266,7 @@ export function GestaoClosers({ closers, times = [] }: GestaoClosersProps) {
             <TableBody>
               {closers.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
+                  <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
                     Nenhum closer cadastrado
                   </TableCell>
                 </TableRow>
@@ -233,6 +291,12 @@ export function GestaoClosers({ closers, times = [] }: GestaoClosersProps) {
                         ) : (
                           <span className="text-muted-foreground text-sm">-</span>
                         )}
+                      </TableCell>
+                      <TableCell className="text-foreground">
+                        {formatPercent(closer.comissao_percentual)}
+                      </TableCell>
+                      <TableCell className="text-foreground">
+                        {formatCurrency(closer.bonus_extra)}
                       </TableCell>
                       <TableCell>
                         <Badge variant={closer.ativo ? "default" : "secondary"}>
@@ -338,6 +402,37 @@ export function GestaoClosers({ closers, times = [] }: GestaoClosersProps) {
                   </Select>
                 </div>
               )}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-foreground flex items-center gap-1">
+                    <Percent className="h-3 w-3" /> Comissão (%)
+                  </Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    max="100"
+                    value={editingCloser.comissao_percentual || ""}
+                    onChange={(e) => setEditingCloser({ ...editingCloser, comissao_percentual: e.target.value ? parseFloat(e.target.value) : null })}
+                    className="bg-secondary border-border"
+                    placeholder="0"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-foreground flex items-center gap-1">
+                    <Gift className="h-3 w-3" /> Bônus Extra (R$)
+                  </Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={editingCloser.bonus_extra || ""}
+                    onChange={(e) => setEditingCloser({ ...editingCloser, bonus_extra: e.target.value ? parseFloat(e.target.value) : null })}
+                    className="bg-secondary border-border"
+                    placeholder="0"
+                  />
+                </div>
+              </div>
             </div>
           )}
           <DialogFooter>

@@ -212,6 +212,8 @@ export type Database = {
       closers: {
         Row: {
           ativo: boolean
+          bonus_extra: number | null
+          comissao_percentual: number | null
           created_at: string
           id: string
           nome: string
@@ -219,6 +221,8 @@ export type Database = {
         }
         Insert: {
           ativo?: boolean
+          bonus_extra?: number | null
+          comissao_percentual?: number | null
           created_at?: string
           id?: string
           nome: string
@@ -226,6 +230,8 @@ export type Database = {
         }
         Update: {
           ativo?: boolean
+          bonus_extra?: number | null
+          comissao_percentual?: number | null
           created_at?: string
           id?: string
           nome?: string
@@ -596,6 +602,8 @@ export type Database = {
       lideres_comerciais: {
         Row: {
           ativo: boolean
+          bonus_extra: number | null
+          comissao_percentual: number | null
           created_at: string
           id: string
           nome: string
@@ -603,6 +611,8 @@ export type Database = {
         }
         Insert: {
           ativo?: boolean
+          bonus_extra?: number | null
+          comissao_percentual?: number | null
           created_at?: string
           id?: string
           nome: string
@@ -610,6 +620,8 @@ export type Database = {
         }
         Update: {
           ativo?: boolean
+          bonus_extra?: number | null
+          comissao_percentual?: number | null
           created_at?: string
           id?: string
           nome?: string
@@ -822,6 +834,8 @@ export type Database = {
       sdrs: {
         Row: {
           ativo: boolean
+          bonus_extra: number | null
+          comissao_percentual: number | null
           created_at: string
           id: string
           nome: string
@@ -829,6 +843,8 @@ export type Database = {
         }
         Insert: {
           ativo?: boolean
+          bonus_extra?: number | null
+          comissao_percentual?: number | null
           created_at?: string
           id?: string
           nome: string
@@ -836,6 +852,8 @@ export type Database = {
         }
         Update: {
           ativo?: boolean
+          bonus_extra?: number | null
+          comissao_percentual?: number | null
           created_at?: string
           id?: string
           nome?: string
