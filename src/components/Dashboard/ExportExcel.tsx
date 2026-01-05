@@ -1,6 +1,6 @@
 import { useState } from "react";
 import * as XLSX from "xlsx";
-import { format } from "date-fns";
+import { format, startOfMonth, endOfMonth, parseISO } from "date-fns";
 import { Download, FileSpreadsheet } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,7 +13,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { ptBR } from "date-fns/locale";
 
-type ExportType = "atendimentos" | "lancamentos_sdr" | "lancamentos_disparo" | "lancamentos_trafego" | "vendas_registro" | "resumo_geral";
+type ExportType = "atendimentos" | "lancamentos_sdr" | "lancamentos_disparo" | "lancamentos_trafego" | "vendas_registro" | "comissoes" | "resumo_geral";
 
 export function ExportExcel() {
   const [isOpen, setIsOpen] = useState(false);
@@ -28,6 +28,7 @@ export function ExportExcel() {
     lancamentos_disparo: "Lançamentos Disparo",
     lancamentos_trafego: "Lançamentos Tráfego",
     vendas_registro: "Vendas Registro",
+    comissoes: "Comissões",
     resumo_geral: "Resumo Geral",
   };
 
@@ -146,6 +147,126 @@ export function ExportExcel() {
             "Ticket": item.ticket,
             "Valor": item.valor,
           }));
+          break;
+        }
+
+        case "comissoes": {
+          // Get metas for the period (using start of month)
+          const monthStr = format(startOfMonth(startDate), "yyyy-MM-dd");
+          const monthStart = startOfMonth(startDate);
+          const monthEnd = endOfMonth(startDate);
+          
+          const { data: metas } = await supabase
+            .from("metas")
+            .select("*")
+            .eq("mes", monthStr);
+
+          const { data: closers } = await supabase.from("closers").select("*").eq("ativo", true);
+          const { data: sdrs } = await supabase.from("sdrs").select("*").eq("ativo", true);
+          const { data: times } = await supabase.from("times").select("*");
+          const { data: atendimentos } = await supabase
+            .from("atendimentos")
+            .select("*")
+            .gte("data_call", format(monthStart, "yyyy-MM-dd"))
+            .lte("data_call", format(monthEnd, "yyyy-MM-dd") + "T23:59:59");
+          const { data: lancamentosSdr } = await supabase
+            .from("lancamentos_sdr")
+            .select("*")
+            .gte("data", format(monthStart, "yyyy-MM-dd"))
+            .lte("data", format(monthEnd, "yyyy-MM-dd"));
+          const { data: lancamentosDisparo } = await supabase
+            .from("lancamentos_disparo")
+            .select("*")
+            .gte("data", format(monthStart, "yyyy-MM-dd"))
+            .lte("data", format(monthEnd, "yyyy-MM-dd"));
+          const { data: lancamentosTrafego } = await supabase
+            .from("lancamentos_trafego")
+            .select("*")
+            .gte("data", format(monthStart, "yyyy-MM-dd"))
+            .lte("data", format(monthEnd, "yyyy-MM-dd"));
+
+          const timeMap = new Map(times?.map((t) => [t.id, t.nome]) || []);
+
+          // Process closers
+          (closers || []).forEach(closer => {
+            const meta = metas?.find(m => m.tipo === "closer" && m.referencia_id === closer.id);
+            
+            const closerAtendimentos = (atendimentos || []).filter(a => 
+              a.closer === closer.nome && 
+              (a.status === "Venda Confirmada" || a.status === "Ganho")
+            );
+            const receitaAtendimentos = closerAtendimentos.reduce((sum, a) => sum + (a.valor || 0), 0);
+            
+            const closerDisparo = (lancamentosDisparo || []).filter(l => l.closer_id === closer.id);
+            const closerTrafego = (lancamentosTrafego || []).filter(l => l.closer_id === closer.id);
+            
+            const receitaDisparo = closerDisparo.reduce((sum, l) => sum + Number(l.receita || 0), 0);
+            const receitaTrafego = closerTrafego.reduce((sum, l) => sum + Number(l.receita || 0), 0);
+            const vendas = closerAtendimentos.length + 
+                          closerDisparo.reduce((sum, l) => sum + (l.vendas || 0), 0) +
+                          closerTrafego.reduce((sum, l) => sum + (l.vendas || 0), 0);
+
+            const receita = receitaAtendimentos + receitaDisparo + receitaTrafego;
+            const comissaoPercentual = meta?.comissao_percentual ?? closer.comissao_percentual ?? 0;
+            const origemComissao = meta?.comissao_percentual ? "Meta" : "Cadastro";
+            const comissaoBase = receita * (comissaoPercentual / 100);
+            const metaReceita = meta?.meta_receita || 0;
+            const progresso = metaReceita > 0 ? (receita / metaReceita) * 100 : 0;
+            const bonus = progresso >= 100 ? (meta?.bonus_extra ?? closer.bonus_extra ?? 0) : 0;
+
+            data.push({
+              "Nome": closer.nome,
+              "Tipo": "Closer",
+              "Time": timeMap.get(closer.time_id || "") || "-",
+              "Vendas": vendas,
+              "Receita (R$)": receita,
+              "Meta Receita (R$)": metaReceita,
+              "Progresso (%)": Math.round(progresso),
+              "% Comissão": comissaoPercentual,
+              "Origem Comissão": origemComissao,
+              "Comissão Base (R$)": comissaoBase,
+              "Bônus (R$)": bonus,
+              "Comissão Total (R$)": comissaoBase + bonus,
+            });
+          });
+
+          // Process SDRs
+          (sdrs || []).forEach(sdr => {
+            const meta = metas?.find(m => m.tipo === "sdr" && m.referencia_id === sdr.id);
+            
+            const sdrLancamentos = (lancamentosSdr || []).filter(l => l.sdr_id === sdr.id);
+            const vendas = sdrLancamentos.reduce((sum, l) => sum + (l.vendas_agendamentos || 0), 0);
+            const agendamentos = sdrLancamentos.reduce((sum, l) => sum + (l.agendamentos || 0), 0);
+
+            const receita = vendas * 1000;
+            const comissaoPercentual = meta?.comissao_percentual ?? sdr.comissao_percentual ?? 0;
+            const origemComissao = meta?.comissao_percentual ? "Meta" : "Cadastro";
+            const comissaoBase = receita * (comissaoPercentual / 100);
+            const metaVendas = meta?.meta_vendas || 0;
+            const metaAgendamentos = meta?.meta_agendamentos || 0;
+            const progressoVendas = metaVendas > 0 ? (vendas / metaVendas) * 100 : 0;
+            const progressoAgend = metaAgendamentos > 0 ? (agendamentos / metaAgendamentos) * 100 : 0;
+            const progresso = Math.max(progressoVendas, progressoAgend);
+            const bonus = progresso >= 100 ? (meta?.bonus_extra ?? sdr.bonus_extra ?? 0) : 0;
+
+            data.push({
+              "Nome": sdr.nome,
+              "Tipo": "SDR",
+              "Time": timeMap.get(sdr.time_id || "") || "-",
+              "Vendas": vendas,
+              "Receita (R$)": receita,
+              "Meta Receita (R$)": meta?.meta_receita || 0,
+              "Progresso (%)": Math.round(progresso),
+              "% Comissão": comissaoPercentual,
+              "Origem Comissão": origemComissao,
+              "Comissão Base (R$)": comissaoBase,
+              "Bônus (R$)": bonus,
+              "Comissão Total (R$)": comissaoBase + bonus,
+            });
+          });
+
+          // Sort by total commission
+          data.sort((a, b) => b["Comissão Total (R$)"] - a["Comissão Total (R$)"]);
           break;
         }
 
