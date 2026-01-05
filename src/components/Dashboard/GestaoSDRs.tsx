@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,10 +8,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { Plus, UserCheck, UserX, Pencil, Trash2, Percent, Gift } from "lucide-react";
+import { Plus, UserCheck, UserX, Pencil, Trash2, Percent, Gift, History } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { useAuth } from "@/hooks/useAuth";
+import { registrarAlteracoesComissao } from "@/hooks/useComissaoHistorico";
+import { HistoricoComissaoDialog } from "./HistoricoComissaoDialog";
 
 interface Time {
   id: string;
@@ -36,6 +39,7 @@ interface GestaoSDRsProps {
 
 export function GestaoSDRs({ sdrs, times = [] }: GestaoSDRsProps) {
   const queryClient = useQueryClient();
+  const { user, profile } = useAuth();
   const [novoSdr, setNovoSdr] = useState("");
   const [novoTimeId, setNovoTimeId] = useState<string>("");
   const [novaComissao, setNovaComissao] = useState<string>("");
@@ -44,6 +48,11 @@ export function GestaoSDRs({ sdrs, times = [] }: GestaoSDRsProps) {
   const [editingSdr, setEditingSdr] = useState<SDR | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [historicoDialogOpen, setHistoricoDialogOpen] = useState(false);
+  const [selectedSdrHistorico, setSelectedSdrHistorico] = useState<SDR | null>(null);
+
+  // Store original values for comparison
+  const originalValuesRef = useRef<{ comissao: number | null; bonus: number | null }>({ comissao: null, bonus: null });
 
   const getTime = (timeId: string | null | undefined) => {
     if (!timeId) return null;
@@ -112,6 +121,10 @@ export function GestaoSDRs({ sdrs, times = [] }: GestaoSDRsProps) {
 
   const handleEdit = (sdr: SDR) => {
     setEditingSdr({ ...sdr });
+    originalValuesRef.current = {
+      comissao: sdr.comissao_percentual ?? null,
+      bonus: sdr.bonus_extra ?? null,
+    };
     setIsEditDialogOpen(true);
   };
 
@@ -123,6 +136,21 @@ export function GestaoSDRs({ sdrs, times = [] }: GestaoSDRsProps) {
 
     setIsSubmitting(true);
     try {
+      // Register changes in history
+      if (user) {
+        await registrarAlteracoesComissao(
+          "sdr",
+          editingSdr.id,
+          editingSdr.nome,
+          originalValuesRef.current.comissao,
+          editingSdr.comissao_percentual,
+          originalValuesRef.current.bonus,
+          editingSdr.bonus_extra,
+          user.id,
+          profile?.nome || user.email || "Sistema"
+        );
+      }
+
       const { error } = await supabase
         .from("sdrs")
         .update({ 
@@ -137,6 +165,7 @@ export function GestaoSDRs({ sdrs, times = [] }: GestaoSDRsProps) {
 
       toast.success("SDR atualizado com sucesso!");
       queryClient.invalidateQueries({ queryKey: ["sdrs"] });
+      queryClient.invalidateQueries({ queryKey: ["comissao_historico"] });
       setIsEditDialogOpen(false);
       setEditingSdr(null);
     } catch (error: any) {
@@ -168,6 +197,11 @@ export function GestaoSDRs({ sdrs, times = [] }: GestaoSDRsProps) {
         toast.error("Erro ao excluir SDR");
       }
     }
+  };
+
+  const handleOpenHistorico = (sdr: SDR) => {
+    setSelectedSdrHistorico(sdr);
+    setHistoricoDialogOpen(true);
   };
 
   return (
@@ -308,6 +342,15 @@ export function GestaoSDRs({ sdrs, times = [] }: GestaoSDRsProps) {
                           <Button
                             variant="ghost"
                             size="sm"
+                            onClick={() => handleOpenHistorico(sdr)}
+                            className="hover:bg-secondary"
+                            title="Ver histórico de alterações"
+                          >
+                            <History className="h-4 w-4 text-muted-foreground" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
                             onClick={() => handleEdit(sdr)}
                             className="hover:bg-secondary"
                           >
@@ -445,6 +488,17 @@ export function GestaoSDRs({ sdrs, times = [] }: GestaoSDRsProps) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Dialog de Histórico */}
+      {selectedSdrHistorico && (
+        <HistoricoComissaoDialog
+          open={historicoDialogOpen}
+          onOpenChange={setHistoricoDialogOpen}
+          entidadeTipo="sdr"
+          entidadeId={selectedSdrHistorico.id}
+          entidadeNome={selectedSdrHistorico.nome}
+        />
+      )}
     </Card>
   );
 }

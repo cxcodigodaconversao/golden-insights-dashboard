@@ -2,14 +2,17 @@ import { useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { DollarSign, Award, Users, Headphones, Gift } from "lucide-react";
+import { DollarSign, Award, Users, Headphones, Gift, Download, FileSpreadsheet } from "lucide-react";
 import { useMetas, Meta } from "@/hooks/useMetas";
 import { useClosers, useSdrs, useAtendimentos, useTimes } from "@/hooks/useAtendimentos";
 import { useLancamentosSDR, useLancamentosDisparo, useLancamentosTrafego } from "@/hooks/useLancamentos";
 import { format, startOfMonth, endOfMonth, addMonths, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useAuth } from "@/hooks/useAuth";
+import { toast } from "sonner";
+import * as XLSX from "xlsx";
 
 interface ComissaoItem {
   id: string;
@@ -24,6 +27,8 @@ interface ComissaoItem {
   bonus: number;
   comissaoTotal: number;
   progresso: number;
+  origemComissao: "Meta" | "Cadastro";
+  comissaoPercentualAplicada: number;
 }
 
 export function ComissoesView() {
@@ -32,6 +37,7 @@ export function ComissoesView() {
   const [selectedMonth, setSelectedMonth] = useState(() => 
     format(startOfMonth(new Date()), "yyyy-MM-dd")
   );
+  const [isExporting, setIsExporting] = useState(false);
 
   const { data: metas = [] } = useMetas(selectedMonth);
   const { data: closers = [] } = useClosers(true);
@@ -118,12 +124,18 @@ export function ComissoesView() {
       const receita = receitaAtendimentos + receitaDisparo + receitaTrafego;
       const vendas = vendasAtendimentos + vendasDisparo + vendasTrafego;
 
-      // Calculate commission
-      const comissaoPercentual = meta?.comissao_percentual || 0;
+      // Priority: Meta > Cadastro
+      const comissaoPercentual = meta?.comissao_percentual ?? closer.comissao_percentual ?? 0;
+      const origemComissao: "Meta" | "Cadastro" = meta?.comissao_percentual ? "Meta" : "Cadastro";
+      
       const comissaoBase = receita * (comissaoPercentual / 100);
       const metaReceita = meta?.meta_receita || 0;
       const progresso = metaReceita > 0 ? (receita / metaReceita) * 100 : 0;
-      const bonus = progresso >= 100 ? (meta?.bonus_extra || 0) : 0;
+      
+      // Bonus: from Meta if achieved, otherwise from Cadastro if achieved
+      const bonusMeta = meta?.bonus_extra ?? 0;
+      const bonusCadastro = closer.bonus_extra ?? 0;
+      const bonus = progresso >= 100 ? (bonusMeta > 0 ? bonusMeta : bonusCadastro) : 0;
 
       items.push({
         id: closer.id,
@@ -138,6 +150,8 @@ export function ComissoesView() {
         bonus,
         comissaoTotal: comissaoBase + bonus,
         progresso,
+        origemComissao,
+        comissaoPercentualAplicada: comissaoPercentual,
       });
     });
 
@@ -155,9 +169,10 @@ export function ComissoesView() {
       const vendas = sdrLancamentos.reduce((sum, l) => sum + (l.vendas_agendamentos || 0), 0);
       const agendamentos = sdrLancamentos.reduce((sum, l) => sum + (l.agendamentos || 0), 0);
 
-      // For SDRs, we assume commission is based on a value per sale/appointment
-      // Using the meta_receita as a base for calculation
-      const comissaoPercentual = meta?.comissao_percentual || 0;
+      // Priority: Meta > Cadastro
+      const comissaoPercentual = meta?.comissao_percentual ?? sdr.comissao_percentual ?? 0;
+      const origemComissao: "Meta" | "Cadastro" = meta?.comissao_percentual ? "Meta" : "Cadastro";
+      
       const metaVendas = meta?.meta_vendas || 0;
       const metaAgendamentos = meta?.meta_agendamentos || 0;
       
@@ -168,7 +183,11 @@ export function ComissoesView() {
       const progressoVendas = metaVendas > 0 ? (vendas / metaVendas) * 100 : 0;
       const progressoAgend = metaAgendamentos > 0 ? (agendamentos / metaAgendamentos) * 100 : 0;
       const progresso = Math.max(progressoVendas, progressoAgend);
-      const bonus = progresso >= 100 ? (meta?.bonus_extra || 0) : 0;
+      
+      // Bonus: from Meta if achieved, otherwise from Cadastro if achieved
+      const bonusMeta = meta?.bonus_extra ?? 0;
+      const bonusCadastro = sdr.bonus_extra ?? 0;
+      const bonus = progresso >= 100 ? (bonusMeta > 0 ? bonusMeta : bonusCadastro) : 0;
 
       items.push({
         id: sdr.id,
@@ -183,6 +202,8 @@ export function ComissoesView() {
         bonus,
         comissaoTotal: comissaoBase + bonus,
         progresso,
+        origemComissao,
+        comissaoPercentualAplicada: comissaoPercentual,
       });
     });
 
@@ -210,6 +231,59 @@ export function ComissoesView() {
   // Single person view for vendedor/sdr
   const isSingleView = (isVendedor && profile?.closer_id) || (isSdr && profile?.sdr_id);
 
+  // Export to Excel
+  const handleExportComissoes = async () => {
+    if (comissoes.length === 0) {
+      toast.warning("Nenhuma comissão para exportar");
+      return;
+    }
+
+    setIsExporting(true);
+    try {
+      // Main data sheet
+      const worksheet = XLSX.utils.json_to_sheet(
+        comissoes.map((item) => ({
+          "Nome": item.nome,
+          "Tipo": item.tipo === "closer" ? "Closer" : "SDR",
+          "Time": item.timeNome || "-",
+          "Vendas": item.vendas,
+          "Receita (R$)": item.receita,
+          "Meta Receita (R$)": item.meta?.meta_receita || 0,
+          "Progresso (%)": Math.round(item.progresso),
+          "% Comissão": item.comissaoPercentualAplicada,
+          "Origem Comissão": item.origemComissao,
+          "Comissão Base (R$)": item.comissaoBase,
+          "Bônus (R$)": item.bonus,
+          "Comissão Total (R$)": item.comissaoTotal,
+        }))
+      );
+
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Comissões");
+
+      // Summary sheet
+      const resumo = XLSX.utils.json_to_sheet([
+        { "Métrica": "Total Comissões", "Valor": formatCurrency(totals.comissaoTotal) },
+        { "Métrica": "Total Bônus", "Valor": formatCurrency(totals.bonusTotal) },
+        { "Métrica": "Pessoas com Meta", "Valor": totals.pessoasComMeta },
+        { "Métrica": "Bateram Meta", "Valor": totals.pessoasBateram },
+        { "Métrica": "Total Pessoas", "Valor": comissoes.length },
+      ]);
+      XLSX.utils.book_append_sheet(workbook, resumo, "Resumo");
+
+      const monthLabel = format(parseISO(selectedMonth), "MMMM_yyyy", { locale: ptBR });
+      const fileName = `Comissoes_${monthLabel}.xlsx`;
+      XLSX.writeFile(workbook, fileName);
+
+      toast.success("Relatório exportado com sucesso!");
+    } catch (error) {
+      console.error(error);
+      toast.error("Erro ao exportar relatório");
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Month filter - only show for admin/lider */}
@@ -230,6 +304,15 @@ export function ComissoesView() {
               </SelectContent>
             </Select>
           </div>
+          <Button 
+            onClick={handleExportComissoes} 
+            disabled={isExporting || comissoes.length === 0}
+            variant="outline"
+            className="gap-2"
+          >
+            <Download className="h-4 w-4" />
+            {isExporting ? "Exportando..." : "Exportar Excel"}
+          </Button>
         </div>
       )}
 
@@ -318,6 +401,7 @@ export function ComissoesView() {
                     <TableHead className="text-right">Vendas</TableHead>
                     <TableHead className="text-right">Receita</TableHead>
                     <TableHead className="text-right">Progresso</TableHead>
+                    <TableHead className="text-right">% Comissão</TableHead>
                     <TableHead className="text-right">Comissão</TableHead>
                     <TableHead className="text-right">Bônus</TableHead>
                     <TableHead className="text-right">Total</TableHead>
@@ -360,6 +444,21 @@ export function ComissoesView() {
                         }>
                           {Math.round(item.progresso)}%
                         </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          <span>{item.comissaoPercentualAplicada}%</span>
+                          <Badge 
+                            variant="outline" 
+                            className={`text-[10px] px-1 ${
+                              item.origemComissao === "Meta" 
+                                ? "border-primary/50 text-primary" 
+                                : "border-muted-foreground/50 text-muted-foreground"
+                            }`}
+                          >
+                            {item.origemComissao}
+                          </Badge>
+                        </div>
                       </TableCell>
                       <TableCell className="text-right">{formatCurrency(item.comissaoBase)}</TableCell>
                       <TableCell className="text-right">

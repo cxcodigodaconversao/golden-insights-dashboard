@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,10 +8,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { Plus, UserCheck, UserX, Pencil, Trash2, Crown, Percent, Gift } from "lucide-react";
+import { Plus, UserCheck, UserX, Pencil, Trash2, Crown, Percent, Gift, History } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { useAuth } from "@/hooks/useAuth";
+import { registrarAlteracoesComissao } from "@/hooks/useComissaoHistorico";
+import { HistoricoComissaoDialog } from "./HistoricoComissaoDialog";
 
 interface Time {
   id: string;
@@ -36,6 +39,7 @@ interface GestaoLideresProps {
 
 export function GestaoLideres({ lideres, times }: GestaoLideresProps) {
   const queryClient = useQueryClient();
+  const { user, profile } = useAuth();
   const [novoLider, setNovoLider] = useState("");
   const [novoTimeId, setNovoTimeId] = useState<string>("");
   const [novaComissao, setNovaComissao] = useState<string>("");
@@ -44,6 +48,11 @@ export function GestaoLideres({ lideres, times }: GestaoLideresProps) {
   const [editingLider, setEditingLider] = useState<Lider | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [historicoDialogOpen, setHistoricoDialogOpen] = useState(false);
+  const [selectedLiderHistorico, setSelectedLiderHistorico] = useState<Lider | null>(null);
+
+  // Store original values for comparison
+  const originalValuesRef = useRef<{ comissao: number | null; bonus: number | null }>({ comissao: null, bonus: null });
 
   const getTimeName = (timeId: string | null) => {
     if (!timeId) return null;
@@ -107,6 +116,10 @@ export function GestaoLideres({ lideres, times }: GestaoLideresProps) {
 
   const handleEdit = (lider: Lider) => {
     setEditingLider({ ...lider });
+    originalValuesRef.current = {
+      comissao: lider.comissao_percentual ?? null,
+      bonus: lider.bonus_extra ?? null,
+    };
     setIsEditDialogOpen(true);
   };
 
@@ -118,6 +131,21 @@ export function GestaoLideres({ lideres, times }: GestaoLideresProps) {
 
     setIsSubmitting(true);
     try {
+      // Register changes in history
+      if (user) {
+        await registrarAlteracoesComissao(
+          "lider",
+          editingLider.id,
+          editingLider.nome,
+          originalValuesRef.current.comissao,
+          editingLider.comissao_percentual,
+          originalValuesRef.current.bonus,
+          editingLider.bonus_extra,
+          user.id,
+          profile?.nome || user.email || "Sistema"
+        );
+      }
+
       const { error } = await supabase
         .from("lideres_comerciais")
         .update({ 
@@ -132,6 +160,7 @@ export function GestaoLideres({ lideres, times }: GestaoLideresProps) {
 
       toast.success("Líder atualizado com sucesso!");
       queryClient.invalidateQueries({ queryKey: ["lideres"] });
+      queryClient.invalidateQueries({ queryKey: ["comissao_historico"] });
       setIsEditDialogOpen(false);
       setEditingLider(null);
     } catch (error: any) {
@@ -155,6 +184,11 @@ export function GestaoLideres({ lideres, times }: GestaoLideresProps) {
     } catch (error: any) {
       toast.error("Erro ao excluir líder");
     }
+  };
+
+  const handleOpenHistorico = (lider: Lider) => {
+    setSelectedLiderHistorico(lider);
+    setHistoricoDialogOpen(true);
   };
 
   const timesAtivos = times.filter(t => t.ativo);
@@ -303,6 +337,15 @@ export function GestaoLideres({ lideres, times }: GestaoLideresProps) {
                           <Button
                             variant="ghost"
                             size="sm"
+                            onClick={() => handleOpenHistorico(lider)}
+                            className="hover:bg-secondary"
+                            title="Ver histórico de alterações"
+                          >
+                            <History className="h-4 w-4 text-muted-foreground" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
                             onClick={() => handleEdit(lider)}
                             className="hover:bg-secondary"
                           >
@@ -438,6 +481,17 @@ export function GestaoLideres({ lideres, times }: GestaoLideresProps) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Dialog de Histórico */}
+      {selectedLiderHistorico && (
+        <HistoricoComissaoDialog
+          open={historicoDialogOpen}
+          onOpenChange={setHistoricoDialogOpen}
+          entidadeTipo="lider"
+          entidadeId={selectedLiderHistorico.id}
+          entidadeNome={selectedLiderHistorico.nome}
+        />
+      )}
     </Card>
   );
 }

@@ -247,6 +247,48 @@ export type Database = {
           },
         ]
       }
+      comissao_historico: {
+        Row: {
+          alterado_por: string
+          alterado_por_nome: string
+          campo_alterado: string
+          created_at: string | null
+          entidade_id: string
+          entidade_nome: string
+          entidade_tipo: string
+          id: string
+          motivo: string | null
+          valor_anterior: number | null
+          valor_novo: number | null
+        }
+        Insert: {
+          alterado_por: string
+          alterado_por_nome: string
+          campo_alterado: string
+          created_at?: string | null
+          entidade_id: string
+          entidade_nome: string
+          entidade_tipo: string
+          id?: string
+          motivo?: string | null
+          valor_anterior?: number | null
+          valor_novo?: number | null
+        }
+        Update: {
+          alterado_por?: string
+          alterado_por_nome?: string
+          campo_alterado?: string
+          created_at?: string | null
+          entidade_id?: string
+          entidade_nome?: string
+          entidade_tipo?: string
+          id?: string
+          motivo?: string | null
+          valor_anterior?: number | null
+          valor_novo?: number | null
+        }
+        Relationships: []
+      }
       google_tokens: {
         Row: {
           access_token: string
