@@ -2,7 +2,7 @@ import { useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 
-type AuditAction = 'create' | 'update' | 'delete';
+type AuditAction = 'create' | 'update' | 'delete' | 'transfer';
 
 interface AuditLogParams {
   action: AuditAction;

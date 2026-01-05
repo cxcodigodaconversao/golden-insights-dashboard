@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 
-export type AppRole = 'admin' | 'lider' | 'vendedor' | 'sdr' | 'user';
+export type AppRole = 'admin' | 'lider' | 'vendedor' | 'sdr' | 'cliente' | 'user';
 
 interface Profile {
   id: string;
@@ -13,6 +13,7 @@ interface Profile {
   closer_id: string | null;
   sdr_id: string | null;
   time_id: string | null;
+  cliente_id: string | null;
 }
 
 interface UseAuthReturn {
@@ -24,6 +25,7 @@ interface UseAuthReturn {
   isLider: boolean;
   isVendedor: boolean;
   isSdr: boolean;
+  isCliente: boolean;
   isLoading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
@@ -165,6 +167,7 @@ export function useAuth(): UseAuthReturn {
     isLider: role === 'lider' || role === 'admin',
     isVendedor: role === 'vendedor',
     isSdr: role === 'sdr',
+    isCliente: role === 'cliente',
     isLoading,
     signIn,
     signOut,
