@@ -7,7 +7,6 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -23,6 +22,9 @@ import {
   ArrowRight,
   Edit2,
   Send,
+  Video,
+  ExternalLink,
+  Briefcase,
 } from "lucide-react";
 import {
   ClientePipeline,
@@ -206,6 +208,72 @@ export function ClienteDetailModal({
                 </div>
               )}
 
+              {/* Dados do Atendimento */}
+              <div className="space-y-3 mt-6">
+                <h4 className="font-semibold text-sm text-muted-foreground">
+                  Atendimento
+                </h4>
+                <div className="grid grid-cols-2 gap-3">
+                  {cliente.data_call && (
+                    <div className="flex items-center gap-2 p-2 rounded-lg bg-secondary/50">
+                      <Video className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm">
+                        Call: {format(parseISO(cliente.data_call), "dd/MM/yyyy", { locale: ptBR })}
+                        {cliente.hora_call && ` às ${cliente.hora_call.slice(0, 5)}`}
+                      </span>
+                    </div>
+                  )}
+                  {cliente.status && (
+                    <div className="flex items-center gap-2 p-2 rounded-lg bg-secondary/50">
+                      <Briefcase className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm">Status: {cliente.status}</span>
+                    </div>
+                  )}
+                  {cliente.sdr_nome && (
+                    <div className="flex items-center gap-2 p-2 rounded-lg bg-secondary/50">
+                      <User className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm">SDR: {cliente.sdr_nome}</span>
+                    </div>
+                  )}
+                  {cliente.closer_nome && (
+                    <div className="flex items-center gap-2 p-2 rounded-lg bg-secondary/50">
+                      <User className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm">Closer: {cliente.closer_nome}</span>
+                    </div>
+                  )}
+                  {cliente.origem_nome && (
+                    <div className="flex items-center gap-2 p-2 rounded-lg bg-secondary/50">
+                      <Briefcase className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm">Origem: {cliente.origem_nome}</span>
+                    </div>
+                  )}
+                </div>
+                
+                {/* Link da Gravação */}
+                {cliente.gravacao && (
+                  <a
+                    href={cliente.gravacao}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 p-2 rounded-lg bg-primary/10 hover:bg-primary/20 transition-colors"
+                  >
+                    <Video className="h-4 w-4 text-primary" />
+                    <span className="text-sm text-primary">Ver Gravação</span>
+                    <ExternalLink className="h-3 w-3 text-primary ml-auto" />
+                  </a>
+                )}
+
+                {/* Informações do SDR */}
+                {cliente.info_sdr && (
+                  <div className="p-2 rounded-lg bg-secondary/50">
+                    <p className="text-xs text-muted-foreground mb-1">
+                      Informações do SDR:
+                    </p>
+                    <p className="text-sm">{cliente.info_sdr}</p>
+                  </div>
+                )}
+              </div>
+
               {/* Dados da negociação */}
               <div className="space-y-3 mt-6">
                 <h4 className="font-semibold text-sm text-muted-foreground">
@@ -258,14 +326,14 @@ export function ClienteDetailModal({
                 <div className="flex items-center gap-2 p-2 rounded-lg bg-secondary/50">
                   <User className="h-4 w-4 text-muted-foreground" />
                   <span className="text-sm">
-                    SDR: {cliente.str_responsavel_nome}
+                    STR Responsável: {cliente.str_responsavel_nome}
                   </span>
                 </div>
                 {cliente.closer_responsavel_nome && (
                   <div className="flex items-center gap-2 p-2 rounded-lg bg-secondary/50">
                     <User className="h-4 w-4 text-muted-foreground" />
                     <span className="text-sm">
-                      Closer: {cliente.closer_responsavel_nome}
+                      Closer Responsável: {cliente.closer_responsavel_nome}
                     </span>
                   </div>
                 )}
@@ -287,7 +355,7 @@ export function ClienteDetailModal({
               {cliente.origem_lead && (
                 <div className="mt-6">
                   <Badge variant="outline">
-                    Origem: {cliente.origem_lead}
+                    Origem Lead: {cliente.origem_lead}
                   </Badge>
                 </div>
               )}

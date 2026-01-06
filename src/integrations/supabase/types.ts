@@ -211,20 +211,32 @@ export type Database = {
       }
       clientes_pipeline: {
         Row: {
+          cliente_id: string | null
+          closer_id: string | null
+          closer_nome: string | null
           closer_responsavel_id: string | null
           closer_responsavel_nome: string | null
           created_at: string | null
+          data_call: string | null
           data_proximo_contato: string | null
           email: string | null
           empresa: string | null
           etapa_atual: string
           etapa_atualizada_em: string | null
+          gravacao: string | null
+          hora_call: string | null
           id: string
+          info_sdr: string | null
           nome: string
           observacoes: string | null
+          origem_id: string | null
           origem_lead: string | null
+          origem_nome: string | null
           proximo_passo: string | null
+          sdr_id: string | null
+          sdr_nome: string | null
           segmento: string | null
+          status: string | null
           str_responsavel_id: string
           str_responsavel_nome: string
           temperatura: string | null
@@ -233,20 +245,32 @@ export type Database = {
           whatsapp: string
         }
         Insert: {
+          cliente_id?: string | null
+          closer_id?: string | null
+          closer_nome?: string | null
           closer_responsavel_id?: string | null
           closer_responsavel_nome?: string | null
           created_at?: string | null
+          data_call?: string | null
           data_proximo_contato?: string | null
           email?: string | null
           empresa?: string | null
           etapa_atual?: string
           etapa_atualizada_em?: string | null
+          gravacao?: string | null
+          hora_call?: string | null
           id?: string
+          info_sdr?: string | null
           nome: string
           observacoes?: string | null
+          origem_id?: string | null
           origem_lead?: string | null
+          origem_nome?: string | null
           proximo_passo?: string | null
+          sdr_id?: string | null
+          sdr_nome?: string | null
           segmento?: string | null
+          status?: string | null
           str_responsavel_id: string
           str_responsavel_nome: string
           temperatura?: string | null
@@ -255,20 +279,32 @@ export type Database = {
           whatsapp: string
         }
         Update: {
+          cliente_id?: string | null
+          closer_id?: string | null
+          closer_nome?: string | null
           closer_responsavel_id?: string | null
           closer_responsavel_nome?: string | null
           created_at?: string | null
+          data_call?: string | null
           data_proximo_contato?: string | null
           email?: string | null
           empresa?: string | null
           etapa_atual?: string
           etapa_atualizada_em?: string | null
+          gravacao?: string | null
+          hora_call?: string | null
           id?: string
+          info_sdr?: string | null
           nome?: string
           observacoes?: string | null
+          origem_id?: string | null
           origem_lead?: string | null
+          origem_nome?: string | null
           proximo_passo?: string | null
+          sdr_id?: string | null
+          sdr_nome?: string | null
           segmento?: string | null
+          status?: string | null
           str_responsavel_id?: string
           str_responsavel_nome?: string
           temperatura?: string | null
@@ -276,7 +312,15 @@ export type Database = {
           valor_potencial?: number | null
           whatsapp?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "clientes_pipeline_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       closers: {
         Row: {

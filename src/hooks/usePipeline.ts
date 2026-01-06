@@ -24,6 +24,19 @@ export interface ClientePipeline {
   etapa_atualizada_em: string | null;
   created_at: string;
   updated_at: string;
+  // Novos campos unificados com Atendimentos
+  cliente_id: string | null;
+  data_call: string | null;
+  hora_call: string | null;
+  sdr_id: string | null;
+  sdr_nome: string | null;
+  closer_id: string | null;
+  closer_nome: string | null;
+  origem_id: string | null;
+  origem_nome: string | null;
+  status: string | null;
+  info_sdr: string | null;
+  gravacao: string | null;
 }
 
 export interface HistoricoPipeline {
@@ -51,16 +64,39 @@ export interface CreateClientePipelineData {
   valor_potencial?: number;
   proximo_passo?: string;
   data_proximo_contato?: string;
+  // Novos campos unificados com Atendimentos
+  cliente_id?: string;
+  data_call?: string;
+  hora_call?: string;
+  sdr_id?: string;
+  sdr_nome?: string;
+  closer_id?: string;
+  closer_nome?: string;
+  origem_id?: string;
+  origem_nome?: string;
+  status?: string;
+  info_sdr?: string;
+  gravacao?: string;
 }
 
 export const ETAPAS_PIPELINE = [
   { id: "primeiro_contato", nome: "Primeiro Contato", cor: "#6B7280" },
   { id: "em_qualificacao", nome: "Em Qualificação", cor: "#3B82F6" },
+  { id: "desqualificado", nome: "Desqualificado", cor: "#991B1B" },
   { id: "proposta_enviada", nome: "Proposta Enviada", cor: "#F59E0B" },
   { id: "em_negociacao", nome: "Em Negociação", cor: "#F97316" },
   { id: "fechamento_pendente", nome: "Fechamento Pendente", cor: "#8B5CF6" },
   { id: "ganho", nome: "Ganho", cor: "#22C55E" },
   { id: "perdido", nome: "Perdido", cor: "#EF4444" },
+] as const;
+
+export const STATUS_ATENDIMENTO = [
+  "Em negociação",
+  "Venda Confirmada",
+  "Venda Reembolsada",
+  "Não fechou",
+  "Não compareceu",
+  "Remarcado",
 ] as const;
 
 export const ORIGENS_LEAD = [

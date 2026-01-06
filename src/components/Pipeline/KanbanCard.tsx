@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { Draggable } from "@hello-pangea/dnd";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Phone, Calendar, User, DollarSign, Clock } from "lucide-react";
+import { Phone, Calendar, User, DollarSign, Clock, Video, Building2 } from "lucide-react";
 import { ClientePipeline, TEMPERATURAS } from "@/hooks/usePipeline";
 import { differenceInDays, format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -72,6 +72,13 @@ export function KanbanCard({ cliente, index, onClick }: KanbanCardProps) {
             {cliente.whatsapp}
           </a>
 
+          {/* Status do Atendimento */}
+          {cliente.status && (
+            <Badge variant="outline" className="text-[10px] mb-2 w-fit">
+              {cliente.status}
+            </Badge>
+          )}
+
           {/* Valor Potencial */}
           {cliente.valor_potencial && cliente.valor_potencial > 0 && (
             <div className="flex items-center gap-1.5 text-xs font-medium text-primary mb-2">
@@ -80,7 +87,32 @@ export function KanbanCard({ cliente, index, onClick }: KanbanCardProps) {
             </div>
           )}
 
-          {/* Footer: SDR e Dias na etapa */}
+          {/* SDR e Closer */}
+          <div className="flex flex-wrap gap-1 mb-2">
+            {cliente.sdr_nome && (
+              <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                SDR: {cliente.sdr_nome.split(" ")[0]}
+              </Badge>
+            )}
+            {cliente.closer_nome && (
+              <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                Closer: {cliente.closer_nome.split(" ")[0]}
+              </Badge>
+            )}
+          </div>
+
+          {/* Data da Call */}
+          {cliente.data_call && (
+            <div className="flex items-center gap-1 text-xs text-muted-foreground mb-2">
+              <Video className="h-3 w-3" />
+              <span>
+                Call: {format(parseISO(cliente.data_call), "dd/MM", { locale: ptBR })}
+                {cliente.hora_call && ` às ${cliente.hora_call.slice(0, 5)}`}
+              </span>
+            </div>
+          )}
+
+          {/* Footer: STR Responsável e Dias na etapa */}
           <div className="flex items-center justify-between gap-2 pt-2 border-t border-border/30">
             <div className="flex items-center gap-1 text-xs text-muted-foreground">
               <User className="h-3 w-3" />
