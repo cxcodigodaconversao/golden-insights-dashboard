@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { useEffect, useMemo, useState } from "react";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -30,7 +30,7 @@ import {
   STATUS_ATENDIMENTO,
 } from "@/hooks/usePipeline";
 import { useSegmentos } from "@/hooks/useSegmentos";
-import { useClosers, useSdrs, useOrigens } from "@/hooks/useAtendimentos";
+import { useClosers, useSdrs, useOrigens, useTimes } from "@/hooks/useAtendimentos";
 import { useClientes } from "@/hooks/useClientes";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -45,6 +45,7 @@ const formSchema = z.object({
   cliente_id: z.string().optional(),
   
   // Dados do Atendimento
+  time_id: z.string().optional().or(z.literal("")),
   data_call: z.date().optional(),
   hora_call: z.string().optional(),
   sdr_id: z.string().min(1, "SDR é obrigatório"),
@@ -83,6 +84,7 @@ export function CadastroClienteForm({ onSuccess }: CadastroClienteFormProps) {
   const { data: closers = [] } = useClosers();
   const { data: sdrs = [] } = useSdrs();
   const { data: origens = [] } = useOrigens();
+  const { data: times = [] } = useTimes();
   const { data: clientes = [] } = useClientes();
 
   const form = useForm<FormData>({
@@ -93,6 +95,7 @@ export function CadastroClienteForm({ onSuccess }: CadastroClienteFormProps) {
       email: "",
       empresa: "",
       cliente_id: "",
+      time_id: "",
       data_call: new Date(),
       hora_call: "",
       sdr_id: "",
@@ -114,6 +117,30 @@ export function CadastroClienteForm({ onSuccess }: CadastroClienteFormProps) {
       observacoes: "",
     },
   });
+
+  const selectedTeamId = useWatch({ control: form.control, name: "time_id" });
+
+  const filteredSdrs = useMemo(() => {
+    if (!selectedTeamId) return sdrs;
+    return sdrs.filter((s) => s.time_id === selectedTeamId);
+  }, [sdrs, selectedTeamId]);
+
+  const filteredClosers = useMemo(() => {
+    if (!selectedTeamId) return closers;
+    return closers.filter((c) => c.time_id === selectedTeamId);
+  }, [closers, selectedTeamId]);
+
+  useEffect(() => {
+    const currentSdrId = form.getValues("sdr_id");
+    if (currentSdrId && !filteredSdrs.some((s) => s.id === currentSdrId)) {
+      form.setValue("sdr_id", "");
+    }
+
+    const currentCloserId = form.getValues("closer_id");
+    if (currentCloserId && !filteredClosers.some((c) => c.id === currentCloserId)) {
+      form.setValue("closer_id", "");
+    }
+  }, [selectedTeamId, filteredSdrs, filteredClosers, form]);
 
   const onSubmit = (data: FormData) => {
     // Buscar nomes pelos IDs
@@ -385,21 +412,47 @@ export function CadastroClienteForm({ onSuccess }: CadastroClienteFormProps) {
 
                     <FormField
                       control={form.control}
+                      name="time_id"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Time</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Selecione o time (opcional)" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {times
+                                .filter((t) => t.ativo)
+                                .map((time) => (
+                                  <SelectItem key={time.id} value={time.id}>
+                                    {time.nome}
+                                  </SelectItem>
+                                ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
                       name="sdr_id"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>SDR <span className="text-destructive">*</span></FormLabel>
-                          <Select
-                            onValueChange={field.onChange}
-                            value={field.value}
-                          >
+                          <FormLabel>
+                            SDR <span className="text-destructive">*</span>
+                          </FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
                             <FormControl>
                               <SelectTrigger>
                                 <SelectValue placeholder="Selecione o SDR" />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              {sdrs.map((sdr) => (
+                              {filteredSdrs.map((sdr) => (
                                 <SelectItem key={sdr.id} value={sdr.id}>
                                   {sdr.nome}
                                 </SelectItem>
@@ -416,18 +469,17 @@ export function CadastroClienteForm({ onSuccess }: CadastroClienteFormProps) {
                       name="closer_id"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Closer <span className="text-destructive">*</span></FormLabel>
-                          <Select
-                            onValueChange={field.onChange}
-                            value={field.value}
-                          >
+                          <FormLabel>
+                            Closer <span className="text-destructive">*</span>
+                          </FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
                             <FormControl>
                               <SelectTrigger>
                                 <SelectValue placeholder="Selecione o Closer" />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              {closers.map((closer) => (
+                              {filteredClosers.map((closer) => (
                                 <SelectItem key={closer.id} value={closer.id}>
                                   {closer.nome}
                                 </SelectItem>
