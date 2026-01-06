@@ -42,7 +42,7 @@ export function GestaoTimes({ times }: GestaoTimesProps) {
   const { data: clientes } = useClientes();
   const [novoTime, setNovoTime] = useState("");
   const [novaCor, setNovaCor] = useState(CORES_PREDEFINIDAS[0]);
-  const [novoClienteId, setNovoClienteId] = useState<string>("");
+  const [novoClienteId, setNovoClienteId] = useState<string>("none");
   const [isAdding, setIsAdding] = useState(false);
   const [editingTime, setEditingTime] = useState<Time | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -59,7 +59,7 @@ export function GestaoTimes({ times }: GestaoTimesProps) {
       const { error } = await supabase.from("times").insert({ 
         nome: novoTime.trim(),
         cor: novaCor,
-        cliente_id: novoClienteId || null,
+        cliente_id: novoClienteId === "none" ? null : novoClienteId,
       });
       if (error) throw error;
 
@@ -67,7 +67,7 @@ export function GestaoTimes({ times }: GestaoTimesProps) {
       queryClient.invalidateQueries({ queryKey: ["times"] });
       setNovoTime("");
       setNovaCor(CORES_PREDEFINIDAS[0]);
-      setNovoClienteId("");
+      setNovoClienteId("none");
     } catch (error: any) {
       if (error.code === "23505") {
         toast.error("Este time já existe");
@@ -112,7 +112,7 @@ export function GestaoTimes({ times }: GestaoTimesProps) {
         .update({ 
           nome: editingTime.nome.trim(), 
           cor: editingTime.cor,
-          cliente_id: editingTime.cliente_id || null,
+          cliente_id: editingTime.cliente_id === "none" ? null : (editingTime.cliente_id || null),
         })
         .eq("id", editingTime.id);
 
@@ -197,7 +197,7 @@ export function GestaoTimes({ times }: GestaoTimesProps) {
                 <SelectValue placeholder="Selecione..." />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Nenhum</SelectItem>
+                <SelectItem value="none">Nenhum</SelectItem>
                 {clientes?.filter(c => c.ativo).map(cliente => (
                   <SelectItem key={cliente.id} value={cliente.id}>
                     {cliente.nome}
@@ -358,14 +358,14 @@ export function GestaoTimes({ times }: GestaoTimesProps) {
                   Cliente Vinculado
                 </Label>
                 <Select 
-                  value={editingTime.cliente_id || ""} 
-                  onValueChange={(value) => setEditingTime({ ...editingTime, cliente_id: value || null })}
+                  value={editingTime.cliente_id || "none"} 
+                  onValueChange={(value) => setEditingTime({ ...editingTime, cliente_id: value === "none" ? null : value })}
                 >
                   <SelectTrigger className="bg-secondary border-border">
                     <SelectValue placeholder="Selecione..." />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Nenhum</SelectItem>
+                    <SelectItem value="none">Nenhum</SelectItem>
                     {clientes?.filter(c => c.ativo).map(cliente => (
                       <SelectItem key={cliente.id} value={cliente.id}>
                         {cliente.nome}
