@@ -8,7 +8,8 @@ import { TeamRanking } from "@/components/Dashboard/TeamRanking";
 import { ConversionFunnel } from "@/components/Dashboard/ConversionFunnel";
 import { PeriodComparison } from "@/components/Dashboard/PeriodComparison";
 import { AtendimentosTable } from "@/components/Dashboard/AtendimentosTable";
-import { Atendimento, CloserStats, calcularMetricas, calcularRankingClosers } from "@/hooks/useAtendimentos";
+import { ClientePipeline } from "@/hooks/usePipeline";
+import { calcularMetricasPipeline, calcularRankingClosersPipeline } from "@/hooks/usePipelineForDashboard";
 import { DollarSign, Users, TrendingUp, Target, Phone, Loader2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -34,7 +35,7 @@ interface SDR {
 }
 
 interface DashboardContentProps {
-  atendimentos: Atendimento[];
+  pipelineData: ClientePipeline[];
   closersList: string[];
   sdrsList: string[];
   dateRange: { start: Date; end: Date };
@@ -45,7 +46,7 @@ interface DashboardContentProps {
 }
 
 export function DashboardContent({ 
-  atendimentos, 
+  pipelineData, 
   closersList, 
   sdrsList, 
   dateRange, 
@@ -54,19 +55,48 @@ export function DashboardContent({
   closers = [],
   sdrs = []
 }: DashboardContentProps) {
+  // Converter Pipeline para formato de Atendimento para compatibilidade com componentes existentes
+  const atendimentosFormatados = useMemo(() => {
+    return pipelineData.map(p => ({
+      id: p.id,
+      nome: p.nome,
+      telefone: p.whatsapp,
+      email: p.email || "",
+      closer: p.closer_nome || "",
+      sdr: p.str_responsavel_nome || p.sdr_nome || "",
+      origem: p.origem_nome || p.origem_lead || "",
+      status: p.etapa_atual === "ganho" ? "Venda Confirmada" : 
+              p.etapa_atual === "perdido" ? "Perdido" : 
+              p.status || "Em negociação",
+      valor: p.valor_potencial || 0,
+      data_call: p.data_call || p.created_at || "",
+      dataCall: new Date(p.data_call || p.created_at || ""),
+      gravacao: p.gravacao || "",
+      info_sdr: p.info_sdr || "",
+      created_at: p.created_at || "",
+      updated_at: p.updated_at || "",
+      google_event_id: null,
+      google_meet_link: null,
+      lead_id: null,
+      hora_call: p.hora_call,
+      cliente_id: p.cliente_id,
+    }));
+  }, [pipelineData]);
+
   const filteredData = useMemo(() => {
-    return atendimentos.filter(
-      (a) => a.dataCall >= dateRange.start && a.dataCall <= dateRange.end
-    );
-  }, [atendimentos, dateRange]);
+    return atendimentosFormatados.filter((a) => {
+      const createdAt = new Date(a.created_at || "");
+      return createdAt >= dateRange.start && createdAt <= dateRange.end;
+    });
+  }, [atendimentosFormatados, dateRange]);
 
   const metricas = useMemo(() => {
-    return calcularMetricas(atendimentos, dateRange.start, dateRange.end);
-  }, [atendimentos, dateRange]);
+    return calcularMetricasPipeline(pipelineData, dateRange.start, dateRange.end);
+  }, [pipelineData, dateRange]);
 
   const ranking = useMemo(() => {
-    return calcularRankingClosers(atendimentos, closersList, dateRange.start, dateRange.end);
-  }, [atendimentos, closersList, dateRange]);
+    return calcularRankingClosersPipeline(pipelineData, closersList, dateRange.start, dateRange.end);
+  }, [pipelineData, closersList, dateRange]);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("pt-BR", {
@@ -93,17 +123,17 @@ export function DashboardContent({
     );
   }
 
-  if (atendimentos.length === 0) {
+  if (pipelineData.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center">
         <div className="mb-4 rounded-full bg-secondary p-4">
           <Loader2 className="h-8 w-8 text-muted-foreground" />
         </div>
         <h3 className="mb-2 text-xl font-semibold text-foreground">
-          Nenhum atendimento encontrado
+          Nenhum lead encontrado
         </h3>
         <p className="text-muted-foreground">
-          Vá para a aba "Cadastrar" para adicionar seus primeiros atendimentos.
+          Vá para a aba "Pipeline" para cadastrar seus primeiros leads.
         </p>
       </div>
     );
@@ -123,7 +153,7 @@ export function DashboardContent({
         <KPICard
           title="Total de Vendas"
           value={metricas.vendas}
-          subtitle={`${metricas.totalAtendimentos} atendimentos`}
+          subtitle={`${metricas.totalLeads} leads`}
           icon={TrendingUp}
           variant="success"
           delay={200}
@@ -149,8 +179,8 @@ export function DashboardContent({
           delay={500}
         />
         <KPICard
-          title="Atendimentos"
-          value={metricas.totalAtendimentos}
+          title="Leads"
+          value={metricas.totalLeads}
           icon={Phone}
           delay={600}
         />
@@ -185,7 +215,7 @@ export function DashboardContent({
             Comparativo de Períodos
           </h3>
           <PeriodComparison 
-            data={atendimentos} 
+            data={atendimentosFormatados} 
             currentStart={dateRange.start} 
             currentEnd={dateRange.end} 
           />
