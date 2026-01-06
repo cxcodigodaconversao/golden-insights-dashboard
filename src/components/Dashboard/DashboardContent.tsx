@@ -63,7 +63,7 @@ export function DashboardContent({
       telefone: p.whatsapp,
       email: p.email || "",
       closer: p.closer_nome || "",
-      sdr: p.str_responsavel_nome || p.sdr_nome || "",
+      sdr: p.sdr_nome || p.str_responsavel_nome || "",
       origem: p.origem_nome || p.origem_lead || "",
       status: p.etapa_atual === "ganho" ? "Venda Confirmada" : 
               p.etapa_atual === "perdido" ? "Perdido" : 
