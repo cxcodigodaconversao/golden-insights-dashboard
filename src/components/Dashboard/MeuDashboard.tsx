@@ -12,14 +12,14 @@ import {
   Gift,
   Calendar
 } from "lucide-react";
-import { Atendimento } from "@/hooks/useAtendimentos";
+import { ClientePipeline } from "@/hooks/usePipeline";
 import { useMetas, Meta } from "@/hooks/useMetas";
 import { format, startOfMonth, endOfMonth, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { MetasProgressBar } from "./MetasProgressBar";
 
 interface MeuDashboardProps {
-  atendimentos: Atendimento[];
+  pipelineData: ClientePipeline[];
   tipo: "closer" | "sdr";
   referenciaId: string;
   referenciaNome: string;
@@ -27,7 +27,7 @@ interface MeuDashboardProps {
 }
 
 export function MeuDashboard({ 
-  atendimentos, 
+  pipelineData, 
   tipo, 
   referenciaId, 
   referenciaNome,
@@ -40,27 +40,27 @@ export function MeuDashboard({
     return metas.find(m => m.tipo === tipo && m.referencia_id === referenciaId);
   }, [metas, tipo, referenciaId]);
 
-  // Filter atendimentos by date range
-  const filteredAtendimentos = useMemo(() => {
-    return atendimentos.filter(a => {
-      const date = new Date(a.data_call);
+  // Filter pipeline data by date range
+  const filteredData = useMemo(() => {
+    return pipelineData.filter(a => {
+      const date = new Date(a.created_at || "");
       return date >= dateRange.start && date <= dateRange.end;
     });
-  }, [atendimentos, dateRange]);
+  }, [pipelineData, dateRange]);
 
   // Calculate stats
   const stats = useMemo(() => {
-    const vendas = filteredAtendimentos.filter(
-      a => a.status === "Venda Confirmada" || a.status === "Ganho"
+    const vendas = filteredData.filter(
+      a => a.etapa_atual === "ganho"
     );
-    const perdidas = filteredAtendimentos.filter(
-      a => a.status === "Perdido" || a.status === "Cancelado"
+    const perdidas = filteredData.filter(
+      a => a.etapa_atual === "perdido"
     );
-    const emNegociacao = filteredAtendimentos.filter(
-      a => a.status === "Em negociação" || a.status === "Remarcado"
+    const emNegociacao = filteredData.filter(
+      a => a.etapa_atual === "em_negociacao" || a.status === "Remarcado"
     );
 
-    const receita = vendas.reduce((sum, a) => sum + (a.valor || 0), 0);
+    const receita = vendas.reduce((sum, a) => sum + (a.valor_potencial || 0), 0);
 
     return {
       vendas,
@@ -68,9 +68,9 @@ export function MeuDashboard({
       perdidas: perdidas.length,
       emNegociacao: emNegociacao.length,
       receita,
-      total: filteredAtendimentos.length,
+      total: filteredData.length,
     };
-  }, [filteredAtendimentos]);
+  }, [filteredData]);
 
   // Calculate commission
   const comissao = useMemo(() => {
@@ -96,11 +96,11 @@ export function MeuDashboard({
     }).format(value);
   };
 
-  const getStatusColor = (status: string) => {
-    if (status === "Venda Confirmada" || status === "Ganho") return "bg-green-500/20 text-green-500";
-    if (status === "Perdido" || status === "Cancelado") return "bg-red-500/20 text-red-500";
-    if (status === "Em negociação") return "bg-yellow-500/20 text-yellow-500";
-    if (status === "Remarcado") return "bg-blue-500/20 text-blue-500";
+  const getStatusColor = (etapa: string) => {
+    if (etapa === "ganho") return "bg-green-500/20 text-green-500";
+    if (etapa === "perdido") return "bg-red-500/20 text-red-500";
+    if (etapa === "em_negociacao") return "bg-yellow-500/20 text-yellow-500";
+    if (etapa === "fechamento_pendente") return "bg-blue-500/20 text-blue-500";
     return "bg-muted text-muted-foreground";
   };
 
@@ -279,14 +279,14 @@ export function MeuDashboard({
                         {venda.nome}
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
-                        {format(new Date(venda.data_call), "dd/MM/yyyy")}
+                        {format(new Date(venda.created_at || ""), "dd/MM/yyyy")}
                       </TableCell>
                       <TableCell className="text-right font-medium">
-                        {formatCurrency(venda.valor || 0)}
+                        {formatCurrency(venda.valor_potencial || 0)}
                       </TableCell>
                       <TableCell>
-                        <Badge className={getStatusColor(venda.status)}>
-                          {venda.status}
+                        <Badge className={getStatusColor(venda.etapa_atual)}>
+                          {venda.etapa_atual === "ganho" ? "Venda" : venda.etapa_atual}
                         </Badge>
                       </TableCell>
                     </TableRow>

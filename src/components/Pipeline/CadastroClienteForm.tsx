@@ -336,10 +336,10 @@ export function CadastroClienteForm({ onSuccess }: CadastroClienteFormProps) {
                       control={form.control}
                       name="data_call"
                       render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Data da Call <span className="text-destructive">*</span></FormLabel>
-                          <Popover>
-                            <PopoverTrigger asChild>
+            <FormItem>
+              <FormLabel>Data da Call</FormLabel>
+              <Popover>
+                <PopoverTrigger asChild>
                               <FormControl>
                                 <Button
                                   variant="outline"

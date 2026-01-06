@@ -6,7 +6,7 @@ import { AdvancedFilters } from "@/components/Dashboard/AdvancedFilters";
 import { DashboardContent } from "@/components/Dashboard/DashboardContent";
 import { MeuDashboard } from "@/components/Dashboard/MeuDashboard";
 import { ClienteDashboard } from "@/components/Dashboard/ClienteDashboard";
-import { AtendimentoForm } from "@/components/Dashboard/AtendimentoForm";
+import { usePipelineForDashboard, calcularMetricasPipeline, calcularRankingClosersPipeline } from "@/hooks/usePipelineForDashboard";
 import { GestaoClosers } from "@/components/Dashboard/GestaoClosers";
 import { GestaoSDRs } from "@/components/Dashboard/GestaoSDRs";
 import { GestaoOrigens } from "@/components/Dashboard/GestaoOrigens";
@@ -29,7 +29,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useDeletedLeadsCount } from "@/hooks/useLeads";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { LayoutDashboard, PlusCircle, Users, Headphones, Globe, FileSpreadsheet, Calendar, Shield, Crown, UserCog, Target, Bell, BarChart3, DollarSign, Building2, Trash2, Columns3 } from "lucide-react";
+import { LayoutDashboard, Users, Headphones, Globe, FileSpreadsheet, Calendar, Shield, Crown, UserCog, Target, Bell, BarChart3, DollarSign, Building2, Trash2, Columns3 } from "lucide-react";
 import { startOfMonth, endOfMonth, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -52,9 +52,9 @@ const Index = () => {
   const [selectedCloser, setSelectedCloser] = useState<string | null>(null);
   const [selectedSdr, setSelectedSdr] = useState<string | null>(null);
   const {
-    data: atendimentos = [],
-    isLoading: isLoadingAtendimentos
-  } = useAtendimentos();
+    data: pipelineData = [],
+    isLoading: isLoadingPipeline
+  } = usePipelineForDashboard();
   const {
     data: closersData = [],
     isLoading: isLoadingClosers
@@ -93,6 +93,7 @@ const Index = () => {
   
   // Count of deleted leads for trash badge
   const { data: deletedLeadsCount = 0 } = useDeletedLeadsCount();
+
 
   // Determine which team to use based on role
   const effectiveTeamFilter = useMemo(() => {
@@ -134,21 +135,24 @@ const Index = () => {
   }, [allSdrs, effectiveTeamFilter, selectedSdr]);
 
   // For Vendedor/SDR: only show their own data
-  const filteredAtendimentos = useMemo(() => {
-    let filtered = atendimentos;
+  const filteredPipelineData = useMemo(() => {
+    let filtered = pipelineData;
 
     // Filter by team if applicable
     if (effectiveTeamFilter) {
       const teamCloserNames = allClosers.filter(c => c.time_id === effectiveTeamFilter).map(c => c.nome);
       const teamSdrNames = allSdrs.filter(s => s.time_id === effectiveTeamFilter).map(s => s.nome);
-      filtered = filtered.filter(a => teamCloserNames.includes(a.closer) || teamSdrNames.includes(a.sdr));
+      filtered = filtered.filter(a => 
+        teamCloserNames.includes(a.closer_nome || "") || 
+        teamSdrNames.includes(a.str_responsavel_nome || a.sdr_nome || "")
+      );
     }
 
     // Filter by specific closer
     if (selectedCloser) {
       const closerName = allClosers.find(c => c.id === selectedCloser)?.nome;
       if (closerName) {
-        filtered = filtered.filter(a => a.closer === closerName);
+        filtered = filtered.filter(a => a.closer_nome === closerName);
       }
     }
 
@@ -156,7 +160,7 @@ const Index = () => {
     if (selectedSdr) {
       const sdrName = allSdrs.find(s => s.id === selectedSdr)?.nome;
       if (sdrName) {
-        filtered = filtered.filter(a => a.sdr === sdrName);
+        filtered = filtered.filter(a => a.str_responsavel_nome === sdrName || a.sdr_nome === sdrName);
       }
     }
 
@@ -164,7 +168,7 @@ const Index = () => {
     if (isVendedor && profile?.closer_id) {
       const myCloser = allClosers.find(c => c.id === profile.closer_id);
       if (myCloser) {
-        filtered = filtered.filter(a => a.closer === myCloser.nome);
+        filtered = filtered.filter(a => a.closer_nome === myCloser.nome);
       }
     }
 
@@ -172,11 +176,11 @@ const Index = () => {
     if (isSdr && profile?.sdr_id) {
       const mySdr = allSdrs.find(s => s.id === profile.sdr_id);
       if (mySdr) {
-        filtered = filtered.filter(a => a.sdr === mySdr.nome);
+        filtered = filtered.filter(a => a.str_responsavel_nome === mySdr.nome || a.sdr_nome === mySdr.nome);
       }
     }
     return filtered;
-  }, [atendimentos, effectiveTeamFilter, selectedCloser, selectedSdr, isVendedor, isSdr, profile, allClosers, allSdrs]);
+  }, [pipelineData, effectiveTeamFilter, selectedCloser, selectedSdr, isVendedor, isSdr, profile, allClosers, allSdrs]);
   const closersList = useMemo(() => {
     if (isVendedor && profile?.closer_id) {
       const myCloser = allClosers.find(c => c.id === profile.closer_id);
@@ -198,16 +202,15 @@ const Index = () => {
     });
     setPeriodType(type);
   };
-  const isLoading = isLoadingAtendimentos || isLoadingClosers || isLoadingSdrs || isLoadingOrigens || isLoadingTimes || isLoadingLideres;
+  const isLoading = isLoadingPipeline || isLoadingClosers || isLoadingSdrs || isLoadingOrigens || isLoadingTimes || isLoadingLideres;
 
   // Permissões por perfil:
   // - Admin: acesso completo
   // - Cliente: apenas dashboard da operação
-  // - Líder: dashboard, resumo, cadastrar, lançamentos, metas (da equipe)
+  // - Líder: dashboard, resumo, lançamentos, metas (da equipe)
   // - Vendedor/SDR: apenas dashboard e resumo metas (próprios resultados)
   const canSeeDashboard = true;
   const canSeeResumo = isAdmin || isLider;
-  const canSeeCadastrar = isAdmin || isLider;
   const canSeeLancamentos = isAdmin || isLider || isVendedor || isSdr;
   const canSeeMetas = isAdmin;
   const canSeeResumoMetas = !isCliente;
@@ -249,10 +252,6 @@ const Index = () => {
               {canSeeResumo && <TabsTrigger value="resumo" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2">
                   <Calendar className="h-4 w-4" />
                   <span className="hidden sm:inline">Resumo</span>
-                </TabsTrigger>}
-              {canSeeCadastrar && <TabsTrigger value="cadastrar" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2">
-                  <PlusCircle className="h-4 w-4" />
-                  <span className="hidden sm:inline">Cadastrar</span>
                 </TabsTrigger>}
               {canSeeLancamentos && <>
                   <TabsTrigger value="lancamentos-sdr" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2">
@@ -345,7 +344,7 @@ const Index = () => {
               </div>
             </div>
             
-            {showClienteDashboard ? <ClienteDashboard /> : showIndividualDashboard ? <MeuDashboard atendimentos={filteredAtendimentos} tipo={isVendedor ? "closer" : "sdr"} referenciaId={(isVendedor ? profile?.closer_id : profile?.sdr_id) || ""} referenciaNome={userReferenciaNome} dateRange={dateRange} /> : <DashboardContent atendimentos={filteredAtendimentos} closersList={closersList} sdrsList={sdrsList} dateRange={dateRange} isLoading={isLoading} times={allTimes} closers={filteredClosers} sdrs={filteredSdrs} />}
+            {showClienteDashboard ? <ClienteDashboard /> : showIndividualDashboard ? <MeuDashboard pipelineData={filteredPipelineData} tipo={isVendedor ? "closer" : "sdr"} referenciaId={(isVendedor ? profile?.closer_id : profile?.sdr_id) || ""} referenciaNome={userReferenciaNome} dateRange={dateRange} /> : <DashboardContent pipelineData={filteredPipelineData} closersList={closersList} sdrsList={sdrsList} dateRange={dateRange} isLoading={isLoading} times={allTimes} closers={filteredClosers} sdrs={filteredSdrs} />}
           </TabsContent>
 
           {canSeePipeline && <TabsContent value="pipeline" className="space-y-6">
@@ -364,13 +363,6 @@ const Index = () => {
               <ResumoSemanal />
             </TabsContent>}
 
-          {canSeeCadastrar && <TabsContent value="cadastrar" className="space-y-6">
-              <div className="opacity-0 animate-fade-in">
-                <h2 className="font-display text-2xl sm:text-3xl font-bold text-foreground">Cadastrar Atendimento</h2>
-                <p className="text-sm text-muted-foreground">Registre um novo atendimento no sistema</p>
-              </div>
-              <AtendimentoForm closers={closersData} sdrs={sdrsData} origens={origensData} onSuccess={() => setActiveTab("dashboard")} />
-            </TabsContent>}
 
           {canSeeLancamentos && <>
               <TabsContent value="lancamentos-sdr" className="space-y-6">
