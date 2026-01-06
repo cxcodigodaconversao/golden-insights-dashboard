@@ -73,28 +73,6 @@ export function PipelinePage() {
         </Card>
       </div>
 
-      {/* Mini resumo por etapa */}
-      <div className="flex flex-wrap gap-2">
-        {stats.map((stat) => (
-          <Badge
-            key={stat.etapa}
-            variant="outline"
-            className="text-xs py-1 px-2"
-            style={{ borderColor: stat.cor }}
-          >
-            <div
-              className="w-2 h-2 rounded-full mr-1.5"
-              style={{ backgroundColor: stat.cor }}
-            />
-            {stat.nome}: {stat.quantidade}
-            {stat.valorTotal > 0 && (
-              <span className="ml-1 text-muted-foreground">
-                ({formatCurrency(stat.valorTotal)})
-              </span>
-            )}
-          </Badge>
-        ))}
-      </div>
 
       {/* Formulário de cadastro (apenas para SDR/Admin/Lider) */}
       {canCadastrar && <CadastroClienteForm />}
