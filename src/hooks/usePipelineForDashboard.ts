@@ -3,17 +3,55 @@ import { supabase } from "@/integrations/supabase/client";
 import { ClientePipeline } from "./usePipeline";
 
 // Hook para buscar dados da Pipeline para o Dashboard
+// Busca de atendimentos e converte para formato compatível
 export function usePipelineForDashboard() {
   return useQuery({
     queryKey: ["pipeline-dashboard"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("clientes_pipeline")
+        .from("atendimentos")
         .select("*")
-        .order("created_at", { ascending: false });
+        .order("data_call", { ascending: false });
       
       if (error) throw error;
-      return data || [];
+      
+      // Converter para formato ClientePipeline
+      return (data || []).map(item => ({
+        id: item.id,
+        nome: item.nome,
+        whatsapp: item.telefone || "",
+        email: item.email,
+        empresa: null,
+        segmento: null,
+        closer_nome: item.closer,
+        closer_id: null,
+        closer_responsavel_id: null,
+        closer_responsavel_nome: null,
+        str_responsavel_nome: item.sdr,
+        str_responsavel_id: "",
+        sdr_nome: item.sdr,
+        sdr_id: null,
+        origem_nome: item.origem,
+        origem_id: null,
+        origem_lead: item.origem,
+        status: item.status,
+        valor_potencial: item.valor,
+        data_call: item.data_call,
+        hora_call: item.hora_call,
+        created_at: item.created_at,
+        updated_at: item.updated_at,
+        etapa_atual: item.status?.includes("Venda") ? "ganho" : 
+                     item.status === "Não fechou" ? "perdido" : 
+                     "primeiro_contato",
+        etapa_atualizada_em: null,
+        temperatura: "morno",
+        cliente_id: item.cliente_id,
+        info_sdr: item.info_sdr,
+        gravacao: item.gravacao,
+        observacoes: null,
+        proximo_passo: null,
+        data_proximo_contato: null,
+      })) as ClientePipeline[];
     },
   });
 }

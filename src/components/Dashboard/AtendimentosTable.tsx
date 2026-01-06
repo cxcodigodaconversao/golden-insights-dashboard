@@ -222,15 +222,15 @@ export function AtendimentosTable({ data }: AtendimentosTableProps) {
   const handleDelete = async (id: string) => {
     try {
       const { error } = await supabase
-        .from("clientes_pipeline")
+        .from("atendimentos")
         .delete()
         .eq("id", id);
 
       if (error) throw error;
 
       toast.success("Registro excluído com sucesso!");
-      queryClient.invalidateQueries({ queryKey: ["pipeline-dashboard"] });
       queryClient.invalidateQueries({ queryKey: ["atendimentos"] });
+      queryClient.invalidateQueries({ queryKey: ["pipeline-dashboard"] });
     } catch (error) {
       console.error("Erro ao excluir:", error);
       toast.error("Erro ao excluir registro");
