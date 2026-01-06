@@ -27,8 +27,6 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { UserPlus, ChevronDown, ChevronUp, Loader2, CalendarIcon } from "lucide-react";
 import {
   useCreateClientePipeline,
-  ETAPAS_PIPELINE,
-  TEMPERATURAS,
   STATUS_ATENDIMENTO,
 } from "@/hooks/usePipeline";
 import { useSegmentos } from "@/hooks/useSegmentos";
@@ -505,70 +503,6 @@ export function CadastroClienteForm({ onSuccess }: CadastroClienteFormProps) {
                     Dados da Negociação
                   </h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="etapa_atual"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Etapa do Funil <span className="text-destructive">*</span></FormLabel>
-                          <Select
-                            onValueChange={field.onChange}
-                            value={field.value}
-                          >
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Selecione" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {ETAPAS_PIPELINE.filter((e) =>
-                                ["primeiro_contato", "em_qualificacao", "desqualificado", "proposta_enviada"].includes(e.id)
-                              ).map((etapa) => (
-                                <SelectItem key={etapa.id} value={etapa.id}>
-                                  <div className="flex items-center gap-2">
-                                    <div
-                                      className="w-2 h-2 rounded-full"
-                                      style={{ backgroundColor: etapa.cor }}
-                                    />
-                                    {etapa.nome}
-                                  </div>
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="temperatura"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Temperatura</FormLabel>
-                          <Select
-                            onValueChange={field.onChange}
-                            value={field.value}
-                          >
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Selecione" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {TEMPERATURAS.map((temp) => (
-                                <SelectItem key={temp.id} value={temp.id}>
-                                  {temp.emoji} {temp.nome}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
                     <FormField
                       control={form.control}
                       name="valor_potencial"

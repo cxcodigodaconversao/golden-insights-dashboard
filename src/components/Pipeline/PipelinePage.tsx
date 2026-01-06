@@ -1,25 +1,15 @@
-import { useMemo } from "react";
 import { CadastroClienteForm } from "./CadastroClienteForm";
-import { KanbanBoard } from "./KanbanBoard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Users, DollarSign, TrendingUp, Target } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { usePipelineStats } from "@/hooks/usePipeline";
-import { useSdrs } from "@/hooks/useAtendimentos";
 
 export function PipelinePage() {
   const { isAdmin, isLider, isSdr } = useAuth();
-  const { data: sdrsData = [] } = useSdrs(true);
   const { stats, totalLeads, totalValor, ganhos, taxaConversao } = usePipelineStats();
 
   const canCadastrar = isAdmin || isLider || isSdr;
-
-  const strs = useMemo(() => {
-    return sdrsData
-      .filter((s) => s.ativo)
-      .map((s) => ({ id: s.id, nome: s.nome }));
-  }, [sdrsData]);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("pt-BR", {
@@ -108,9 +98,6 @@ export function PipelinePage() {
 
       {/* Formulário de cadastro (apenas para SDR/Admin/Lider) */}
       {canCadastrar && <CadastroClienteForm />}
-
-      {/* Kanban Board */}
-      <KanbanBoard strs={strs} />
     </div>
   );
 }
