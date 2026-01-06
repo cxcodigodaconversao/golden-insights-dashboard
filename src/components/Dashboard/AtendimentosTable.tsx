@@ -161,6 +161,25 @@ export function AtendimentosTable({ data }: AtendimentosTableProps) {
     try {
       const statusChanged = originalStatus !== editingItem.status;
 
+      // Buscar IDs correspondentes aos nomes selecionados
+      const selectedSdr = sdrsData.find(s => s.nome === editingItem.sdr);
+      const selectedCloser = closersData.find(c => c.nome === editingItem.closer);
+      const selectedOrigem = origensData.find(o => o.nome === editingItem.origem);
+
+      // Determinar etapa_atual baseado no status
+      let etapa_atual: string | undefined;
+      if (editingItem.status === "Venda Confirmada") {
+        etapa_atual = "ganho";
+      } else if (["Não fechou", "Sem interesse", "Sem dinheiro", "Venda Reembolsada"].includes(editingItem.status)) {
+        etapa_atual = "perdido";
+      } else if (editingItem.status === "Não compareceu") {
+        etapa_atual = "no_show";
+      } else if (editingItem.status === "Remarcado") {
+        etapa_atual = "reagendado";
+      } else {
+        etapa_atual = "negociacao";
+      }
+
       const { error } = await supabase
         .from("clientes_pipeline")
         .update({
@@ -168,13 +187,19 @@ export function AtendimentosTable({ data }: AtendimentosTableProps) {
           whatsapp: editingItem.telefone || null,
           email: editingItem.email || null,
           sdr_nome: editingItem.sdr,
+          sdr_id: selectedSdr?.id || null,
           closer_nome: editingItem.closer,
+          closer_id: selectedCloser?.id || null,
           origem_nome: editingItem.origem,
+          origem_id: selectedOrigem?.id || null,
           status: editingItem.status,
+          etapa_atual: etapa_atual,
+          etapa_atualizada_em: new Date().toISOString(),
           valor_potencial: editingItem.valor || null,
           data_call: editingItem.dataCall.toISOString(),
           info_sdr: editingItem.info_sdr || null,
           gravacao: editingItem.gravacao || null,
+          updated_at: new Date().toISOString(),
         })
         .eq("id", editingItem.id);
 
