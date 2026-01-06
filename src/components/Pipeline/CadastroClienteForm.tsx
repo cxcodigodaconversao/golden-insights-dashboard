@@ -6,6 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Form,
   FormControl,
@@ -22,28 +24,52 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { UserPlus, ChevronDown, ChevronUp, Loader2 } from "lucide-react";
+import { UserPlus, ChevronDown, ChevronUp, Loader2, CalendarIcon } from "lucide-react";
 import {
   useCreateClientePipeline,
   ETAPAS_PIPELINE,
-  ORIGENS_LEAD,
   TEMPERATURAS,
+  STATUS_ATENDIMENTO,
 } from "@/hooks/usePipeline";
 import { useSegmentos } from "@/hooks/useSegmentos";
+import { useClosers, useSdrs, useOrigens } from "@/hooks/useAtendimentos";
+import { useClientes } from "@/hooks/useClientes";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { cn } from "@/lib/utils";
 
 const formSchema = z.object({
+  // Dados do Cliente
   nome: z.string().min(2, "Nome deve ter pelo menos 2 caracteres"),
   whatsapp: z.string().min(10, "WhatsApp inválido"),
   email: z.string().email("Email inválido").optional().or(z.literal("")),
   empresa: z.string().optional(),
+  cliente_id: z.string().optional(),
+  
+  // Dados do Atendimento
+  data_call: z.date().optional(),
+  hora_call: z.string().optional(),
+  sdr_id: z.string().min(1, "SDR é obrigatório"),
+  sdr_nome: z.string().optional(),
+  closer_id: z.string().min(1, "Closer é obrigatório"),
+  closer_nome: z.string().optional(),
+  origem_id: z.string().min(1, "Origem é obrigatória"),
+  origem_nome: z.string().optional(),
+  status: z.string().default("Em negociação"),
+  
+  // Dados da Negociação
   segmento: z.string().optional(),
   origem_lead: z.string().optional(),
-  observacoes: z.string().optional(),
   etapa_atual: z.string().default("primeiro_contato"),
   temperatura: z.string().default("morno"),
   valor_potencial: z.coerce.number().optional(),
   proximo_passo: z.string().optional(),
   data_proximo_contato: z.string().optional(),
+  
+  // Informações Adicionais
+  info_sdr: z.string().optional(),
+  gravacao: z.string().optional(),
+  observacoes: z.string().optional(),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -56,6 +82,10 @@ export function CadastroClienteForm({ onSuccess }: CadastroClienteFormProps) {
   const [isOpen, setIsOpen] = useState(true);
   const createCliente = useCreateClientePipeline();
   const { data: segmentos = [] } = useSegmentos();
+  const { data: closers = [] } = useClosers();
+  const { data: sdrs = [] } = useSdrs();
+  const { data: origens = [] } = useOrigens();
+  const { data: clientes = [] } = useClientes();
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -64,32 +94,61 @@ export function CadastroClienteForm({ onSuccess }: CadastroClienteFormProps) {
       whatsapp: "",
       email: "",
       empresa: "",
+      cliente_id: "",
+      data_call: new Date(),
+      hora_call: "",
+      sdr_id: "",
+      sdr_nome: "",
+      closer_id: "",
+      closer_nome: "",
+      origem_id: "",
+      origem_nome: "",
+      status: "Em negociação",
       segmento: "",
       origem_lead: "",
-      observacoes: "",
       etapa_atual: "primeiro_contato",
       temperatura: "morno",
       valor_potencial: undefined,
       proximo_passo: "",
       data_proximo_contato: "",
+      info_sdr: "",
+      gravacao: "",
+      observacoes: "",
     },
   });
 
   const onSubmit = (data: FormData) => {
+    // Buscar nomes pelos IDs
+    const sdrSelecionado = sdrs.find(s => s.id === data.sdr_id);
+    const closerSelecionado = closers.find(c => c.id === data.closer_id);
+    const origemSelecionada = origens.find(o => o.id === data.origem_id);
+
     createCliente.mutate(
       {
         nome: data.nome,
         whatsapp: data.whatsapp,
         email: data.email || undefined,
         empresa: data.empresa || undefined,
+        cliente_id: data.cliente_id || undefined,
+        data_call: data.data_call?.toISOString() || undefined,
+        hora_call: data.hora_call || undefined,
+        sdr_id: data.sdr_id || undefined,
+        sdr_nome: sdrSelecionado?.nome || undefined,
+        closer_id: data.closer_id || undefined,
+        closer_nome: closerSelecionado?.nome || undefined,
+        origem_id: data.origem_id || undefined,
+        origem_nome: origemSelecionada?.nome || undefined,
+        status: data.status || undefined,
         segmento: data.segmento || undefined,
         origem_lead: data.origem_lead || undefined,
-        observacoes: data.observacoes || undefined,
         etapa_atual: data.etapa_atual,
         temperatura: data.temperatura,
         valor_potencial: data.valor_potencial || undefined,
         proximo_passo: data.proximo_passo || undefined,
         data_proximo_contato: data.data_proximo_contato || undefined,
+        info_sdr: data.info_sdr || undefined,
+        gravacao: data.gravacao || undefined,
+        observacoes: data.observacoes || undefined,
       },
       {
         onSuccess: () => {
@@ -119,7 +178,7 @@ export function CadastroClienteForm({ onSuccess }: CadastroClienteFormProps) {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <UserPlus className="h-5 w-5 text-primary" />
-                <CardTitle className="text-lg">Cadastrar Novo Cliente</CardTitle>
+                <CardTitle className="text-lg">Cadastrar Novo Cliente na Pipeline</CardTitle>
               </div>
               {isOpen ? (
                 <ChevronUp className="h-5 w-5 text-muted-foreground" />
@@ -139,7 +198,7 @@ export function CadastroClienteForm({ onSuccess }: CadastroClienteFormProps) {
               >
                 {/* Dados do Cliente */}
                 <div className="space-y-4">
-                  <h4 className="font-semibold text-sm text-muted-foreground">
+                  <h4 className="font-semibold text-sm text-muted-foreground border-b pb-2">
                     Dados do Cliente
                   </h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -148,7 +207,7 @@ export function CadastroClienteForm({ onSuccess }: CadastroClienteFormProps) {
                       name="nome"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Nome Completo *</FormLabel>
+                          <FormLabel>Nome Completo <span className="text-destructive">*</span></FormLabel>
                           <FormControl>
                             <Input placeholder="Nome do cliente" {...field} />
                           </FormControl>
@@ -162,7 +221,7 @@ export function CadastroClienteForm({ onSuccess }: CadastroClienteFormProps) {
                       name="whatsapp"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>WhatsApp *</FormLabel>
+                          <FormLabel>WhatsApp <span className="text-destructive">*</span></FormLabel>
                           <FormControl>
                             <Input
                               placeholder="(00) 00000-0000"
@@ -211,6 +270,34 @@ export function CadastroClienteForm({ onSuccess }: CadastroClienteFormProps) {
 
                     <FormField
                       control={form.control}
+                      name="cliente_id"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Cliente/Projeto</FormLabel>
+                          <Select
+                            onValueChange={field.onChange}
+                            value={field.value}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Selecione o cliente/projeto" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {clientes.map((cliente) => (
+                                <SelectItem key={cliente.id} value={cliente.id}>
+                                  {cliente.nome}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
                       name="segmento"
                       render={({ field }) => (
                         <FormItem>
@@ -236,26 +323,171 @@ export function CadastroClienteForm({ onSuccess }: CadastroClienteFormProps) {
                         </FormItem>
                       )}
                     />
+                  </div>
+                </div>
+
+                {/* Dados do Atendimento */}
+                <div className="space-y-4">
+                  <h4 className="font-semibold text-sm text-muted-foreground border-b pb-2">
+                    Dados do Atendimento
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="data_call"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Data da Call <span className="text-destructive">*</span></FormLabel>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <FormControl>
+                                <Button
+                                  variant="outline"
+                                  className={cn(
+                                    "w-full justify-start text-left font-normal",
+                                    !field.value && "text-muted-foreground"
+                                  )}
+                                >
+                                  <CalendarIcon className="mr-2 h-4 w-4" />
+                                  {field.value ? (
+                                    format(field.value, "dd/MM/yyyy", { locale: ptBR })
+                                  ) : (
+                                    <span>Selecione a data</span>
+                                  )}
+                                </Button>
+                              </FormControl>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0">
+                              <Calendar
+                                mode="single"
+                                selected={field.value}
+                                onSelect={field.onChange}
+                                locale={ptBR}
+                              />
+                            </PopoverContent>
+                          </Popover>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
                     <FormField
                       control={form.control}
-                      name="origem_lead"
+                      name="hora_call"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Origem do Lead</FormLabel>
+                          <FormLabel>Hora da Call</FormLabel>
+                          <FormControl>
+                            <Input type="time" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="sdr_id"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>SDR <span className="text-destructive">*</span></FormLabel>
                           <Select
                             onValueChange={field.onChange}
                             value={field.value}
                           >
                             <FormControl>
                               <SelectTrigger>
-                                <SelectValue placeholder="Selecione" />
+                                <SelectValue placeholder="Selecione o SDR" />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              {ORIGENS_LEAD.map((origem) => (
-                                <SelectItem key={origem} value={origem}>
-                                  {origem}
+                              {sdrs.map((sdr) => (
+                                <SelectItem key={sdr.id} value={sdr.id}>
+                                  {sdr.nome}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="closer_id"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Closer <span className="text-destructive">*</span></FormLabel>
+                          <Select
+                            onValueChange={field.onChange}
+                            value={field.value}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Selecione o Closer" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {closers.map((closer) => (
+                                <SelectItem key={closer.id} value={closer.id}>
+                                  {closer.nome}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="origem_id"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Origem <span className="text-destructive">*</span></FormLabel>
+                          <Select
+                            onValueChange={field.onChange}
+                            value={field.value}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Selecione a origem" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {origens.map((origem) => (
+                                <SelectItem key={origem.id} value={origem.id}>
+                                  {origem.nome}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="status"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Status</FormLabel>
+                          <Select
+                            onValueChange={field.onChange}
+                            value={field.value}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Selecione o status" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {STATUS_ATENDIMENTO.map((status) => (
+                                <SelectItem key={status} value={status}>
+                                  {status}
                                 </SelectItem>
                               ))}
                             </SelectContent>
@@ -265,30 +497,11 @@ export function CadastroClienteForm({ onSuccess }: CadastroClienteFormProps) {
                       )}
                     />
                   </div>
-
-                  <FormField
-                    control={form.control}
-                    name="observacoes"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Observações Iniciais</FormLabel>
-                        <FormControl>
-                          <Textarea
-                            placeholder="Anotações sobre o cliente..."
-                            className="resize-none"
-                            rows={3}
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
                 </div>
 
                 {/* Dados da Negociação */}
                 <div className="space-y-4">
-                  <h4 className="font-semibold text-sm text-muted-foreground">
+                  <h4 className="font-semibold text-sm text-muted-foreground border-b pb-2">
                     Dados da Negociação
                   </h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -297,7 +510,7 @@ export function CadastroClienteForm({ onSuccess }: CadastroClienteFormProps) {
                       name="etapa_atual"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Etapa do Funil *</FormLabel>
+                          <FormLabel>Etapa do Funil <span className="text-destructive">*</span></FormLabel>
                           <Select
                             onValueChange={field.onChange}
                             value={field.value}
@@ -309,7 +522,7 @@ export function CadastroClienteForm({ onSuccess }: CadastroClienteFormProps) {
                             </FormControl>
                             <SelectContent>
                               {ETAPAS_PIPELINE.filter((e) =>
-                                ["primeiro_contato", "em_qualificacao", "proposta_enviada"].includes(e.id)
+                                ["primeiro_contato", "em_qualificacao", "desqualificado", "proposta_enviada"].includes(e.id)
                               ).map((etapa) => (
                                 <SelectItem key={etapa.id} value={etapa.id}>
                                   <div className="flex items-center gap-2">
@@ -405,6 +618,68 @@ export function CadastroClienteForm({ onSuccess }: CadastroClienteFormProps) {
                       )}
                     />
                   </div>
+                </div>
+
+                {/* Informações Adicionais */}
+                <div className="space-y-4">
+                  <h4 className="font-semibold text-sm text-muted-foreground border-b pb-2">
+                    Informações Adicionais
+                  </h4>
+                  
+                  <FormField
+                    control={form.control}
+                    name="info_sdr"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Informações do SDR</FormLabel>
+                        <FormControl>
+                          <Textarea
+                            placeholder="Observações do SDR sobre o lead..."
+                            className="resize-none"
+                            rows={3}
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="gravacao"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Link da Gravação</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="https://..."
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="observacoes"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Observações Gerais</FormLabel>
+                        <FormControl>
+                          <Textarea
+                            placeholder="Anotações adicionais sobre o cliente..."
+                            className="resize-none"
+                            rows={3}
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                 </div>
 
                 <div className="flex justify-end gap-2">
