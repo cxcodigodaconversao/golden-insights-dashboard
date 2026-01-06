@@ -162,16 +162,16 @@ export function AtendimentosTable({ data }: AtendimentosTableProps) {
       const statusChanged = originalStatus !== editingItem.status;
 
       const { error } = await supabase
-        .from("atendimentos")
+        .from("clientes_pipeline")
         .update({
           nome: editingItem.nome,
-          telefone: editingItem.telefone || null,
+          whatsapp: editingItem.telefone || null,
           email: editingItem.email || null,
-          sdr: editingItem.sdr,
-          closer: editingItem.closer,
-          origem: editingItem.origem,
+          sdr_nome: editingItem.sdr,
+          closer_nome: editingItem.closer,
+          origem_nome: editingItem.origem,
           status: editingItem.status,
-          valor: editingItem.valor || null,
+          valor_potencial: editingItem.valor || null,
           data_call: editingItem.dataCall.toISOString(),
           info_sdr: editingItem.info_sdr || null,
           gravacao: editingItem.gravacao || null,
@@ -207,13 +207,14 @@ export function AtendimentosTable({ data }: AtendimentosTableProps) {
         });
       }
 
-      toast.success("Atendimento atualizado com sucesso!");
-      queryClient.invalidateQueries({ queryKey: ["atendimentos"] });
+      toast.success("Lead atualizado com sucesso!");
+      queryClient.invalidateQueries({ queryKey: ["clientes-pipeline"] });
+      queryClient.invalidateQueries({ queryKey: ["pipeline-dashboard"] });
       setIsEditDialogOpen(false);
       setEditingItem(null);
     } catch (error) {
       console.error("Erro ao atualizar:", error);
-      toast.error("Erro ao atualizar atendimento");
+      toast.error("Erro ao atualizar lead");
     } finally {
       setIsSubmitting(false);
     }
