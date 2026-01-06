@@ -142,7 +142,11 @@ const Index = () => {
     if (effectiveTeamFilter) {
       const teamCloserNames = allClosers.filter(c => c.time_id === effectiveTeamFilter).map(c => c.nome);
       const teamSdrNames = allSdrs.filter(s => s.time_id === effectiveTeamFilter).map(s => s.nome);
-      filtered = filtered.filter(a => teamCloserNames.includes(a.closer_nome || "") || teamSdrNames.includes(a.str_responsavel_nome || a.sdr_nome || ""));
+      filtered = filtered.filter(a => 
+        teamCloserNames.includes(a.closer_nome || "") || 
+        teamSdrNames.includes(a.sdr_nome || "") ||
+        teamSdrNames.includes(a.str_responsavel_nome || "")
+      );
     }
 
     // Filter by specific closer
