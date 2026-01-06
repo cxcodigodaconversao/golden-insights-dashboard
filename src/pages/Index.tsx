@@ -32,7 +32,6 @@ import { Badge } from "@/components/ui/badge";
 import { LayoutDashboard, Users, Headphones, Globe, FileSpreadsheet, Calendar, Shield, Crown, UserCog, Target, Bell, BarChart3, DollarSign, Building2, Trash2, Columns3 } from "lucide-react";
 import { startOfMonth, endOfMonth, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-
 const Index = () => {
   const {
     isAdmin,
@@ -90,10 +89,11 @@ const Index = () => {
   const {
     data: allLideres = []
   } = useLideres(true);
-  
-  // Count of deleted leads for trash badge
-  const { data: deletedLeadsCount = 0 } = useDeletedLeadsCount();
 
+  // Count of deleted leads for trash badge
+  const {
+    data: deletedLeadsCount = 0
+  } = useDeletedLeadsCount();
 
   // Determine which team to use based on role
   const effectiveTeamFilter = useMemo(() => {
@@ -142,10 +142,7 @@ const Index = () => {
     if (effectiveTeamFilter) {
       const teamCloserNames = allClosers.filter(c => c.time_id === effectiveTeamFilter).map(c => c.nome);
       const teamSdrNames = allSdrs.filter(s => s.time_id === effectiveTeamFilter).map(s => s.nome);
-      filtered = filtered.filter(a => 
-        teamCloserNames.includes(a.closer_nome || "") || 
-        teamSdrNames.includes(a.str_responsavel_nome || a.sdr_nome || "")
-      );
+      filtered = filtered.filter(a => teamCloserNames.includes(a.closer_nome || "") || teamSdrNames.includes(a.str_responsavel_nome || a.sdr_nome || ""));
     }
 
     // Filter by specific closer
@@ -247,7 +244,8 @@ const Index = () => {
               </TabsTrigger>
               {canSeePipeline && <TabsTrigger value="pipeline" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2">
                   <Columns3 className="h-4 w-4" />
-                  <span className="hidden sm:inline">Pipeline</span>
+                  <span className="hidden sm:inline">Cadastro de Leads
+              </span>
                 </TabsTrigger>}
               {canSeeResumo && <TabsTrigger value="resumo" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2">
                   <Calendar className="h-4 w-4" />
@@ -308,11 +306,9 @@ const Index = () => {
               {canSeeLixeira && <TabsTrigger value="lixeira" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2 relative">
                   <Trash2 className="h-4 w-4" />
                   <span className="hidden sm:inline">Lixeira</span>
-                  {deletedLeadsCount > 0 && (
-                    <Badge variant="destructive" className="absolute -top-1 -right-1 h-4 w-4 p-0 flex items-center justify-center text-[10px]">
+                  {deletedLeadsCount > 0 && <Badge variant="destructive" className="absolute -top-1 -right-1 h-4 w-4 p-0 flex items-center justify-center text-[10px]">
                       {deletedLeadsCount > 9 ? "9+" : deletedLeadsCount}
-                    </Badge>
-                  )}
+                    </Badge>}
                 </TabsTrigger>}
             </TabsList>
             
