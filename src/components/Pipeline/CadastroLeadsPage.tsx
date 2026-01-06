@@ -5,7 +5,7 @@ import { Users, DollarSign, TrendingUp, Target } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { usePipelineStats } from "@/hooks/usePipeline";
 
-export function PipelinePage() {
+export function CadastroLeadsPage() {
   const { isAdmin, isLider, isSdr } = useAuth();
   const { stats, totalLeads, totalValor, ganhos, taxaConversao } = usePipelineStats();
 
@@ -22,7 +22,7 @@ export function PipelinePage() {
 
   return (
     <div className="space-y-6">
-      {/* KPIs do Pipeline */}
+      {/* KPIs do Cadastro de Leads */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">

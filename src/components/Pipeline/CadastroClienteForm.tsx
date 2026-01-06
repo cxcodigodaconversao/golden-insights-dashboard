@@ -176,7 +176,7 @@ export function CadastroClienteForm({ onSuccess }: CadastroClienteFormProps) {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <UserPlus className="h-5 w-5 text-primary" />
-                <CardTitle className="text-lg">Cadastrar Novo Cliente na Pipeline</CardTitle>
+                <CardTitle className="text-lg">Cadastrar Novo Lead</CardTitle>
               </div>
               {isOpen ? (
                 <ChevronUp className="h-5 w-5 text-muted-foreground" />

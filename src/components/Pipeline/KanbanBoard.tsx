@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { DragDropContext, DropResult } from "@hello-pangea/dnd";
 import { KanbanColumn } from "./KanbanColumn";
-import { PipelineFilters } from "./PipelineFilters";
+import { LeadsFilters } from "./LeadsFilters";
 import { ClienteDetailModal } from "./ClienteDetailModal";
 import {
   ClientePipeline,
@@ -151,7 +151,7 @@ export function KanbanBoard({ strs }: KanbanBoardProps) {
 
   return (
     <div className="space-y-4">
-      <PipelineFilters
+      <LeadsFilters
         search={search}
         onSearchChange={setSearch}
         temperatura={temperatura}

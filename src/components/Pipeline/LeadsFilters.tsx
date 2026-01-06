@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Search, X } from "lucide-react";
 import { TEMPERATURAS } from "@/hooks/usePipeline";
 
-interface PipelineFiltersProps {
+interface LeadsFiltersProps {
   search: string;
   onSearchChange: (value: string) => void;
   temperatura: string | null;
@@ -22,7 +22,7 @@ interface PipelineFiltersProps {
   hasActiveFilters: boolean;
 }
 
-export function PipelineFilters({
+export function LeadsFilters({
   search,
   onSearchChange,
   temperatura,
@@ -32,7 +32,7 @@ export function PipelineFilters({
   strs,
   onClearFilters,
   hasActiveFilters,
-}: PipelineFiltersProps) {
+}: LeadsFiltersProps) {
   return (
     <div className="flex flex-wrap items-center gap-3 p-4 bg-secondary/30 rounded-lg">
       {/* Busca */}
