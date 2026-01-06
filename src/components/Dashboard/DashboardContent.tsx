@@ -55,7 +55,7 @@ export function DashboardContent({
   closers = [],
   sdrs = []
 }: DashboardContentProps) {
-  // Converter Pipeline para formato de Atendimento para compatibilidade com componentes existentes
+  // Converter Leads para formato de Atendimento para compatibilidade com componentes existentes
   const atendimentosFormatados = useMemo(() => {
     return pipelineData.map(p => ({
       id: p.id,
@@ -133,7 +133,7 @@ export function DashboardContent({
           Nenhum lead encontrado
         </h3>
         <p className="text-muted-foreground">
-          Vá para a aba "Pipeline" para cadastrar seus primeiros leads.
+          Vá para a aba "Cadastro de Leads" para cadastrar seus primeiros leads.
         </p>
       </div>
     );
