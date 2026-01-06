@@ -23,7 +23,7 @@ import { ResumoSemanal } from "@/components/Dashboard/ResumoSemanal";
 import { ImportExcel } from "@/components/Dashboard/ImportExcel";
 import { ExportExcel } from "@/components/Dashboard/ExportExcel";
 import { LixeiraLeads } from "@/components/Dashboard/LixeiraLeads";
-import { PipelinePage } from "@/components/Pipeline/PipelinePage";
+import { CadastroLeadsPage } from "@/components/Pipeline/CadastroLeadsPage";
 import { useAtendimentos, useClosers, useSdrs, useOrigens, useTimes, useLideres } from "@/hooks/useAtendimentos";
 import { useAuth } from "@/hooks/useAuth";
 import { useDeletedLeadsCount } from "@/hooks/useLeads";
@@ -345,10 +345,10 @@ const Index = () => {
 
           {canSeePipeline && <TabsContent value="pipeline" className="space-y-6">
               <div className="opacity-0 animate-fade-in">
-                <h2 className="font-display text-2xl sm:text-3xl font-bold text-foreground">Pipeline Comercial</h2>
-                <p className="text-sm text-muted-foreground">Gerencie seus leads e negociações</p>
+                <h2 className="font-display text-2xl sm:text-3xl font-bold text-foreground">Cadastro de Leads</h2>
+                <p className="text-sm text-muted-foreground">Gerencie e cadastre novos leads</p>
               </div>
-              <PipelinePage />
+              <CadastroLeadsPage />
             </TabsContent>}
 
           {canSeeResumo && <TabsContent value="resumo" className="space-y-6">
