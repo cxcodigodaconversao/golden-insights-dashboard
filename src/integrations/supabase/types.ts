@@ -1086,6 +1086,7 @@ export type Database = {
           bonus_extra: number | null
           comissao_percentual: number | null
           created_at: string
+          email: string | null
           id: string
           nome: string
           time_id: string | null
@@ -1095,6 +1096,7 @@ export type Database = {
           bonus_extra?: number | null
           comissao_percentual?: number | null
           created_at?: string
+          email?: string | null
           id?: string
           nome: string
           time_id?: string | null
@@ -1104,6 +1106,7 @@ export type Database = {
           bonus_extra?: number | null
           comissao_percentual?: number | null
           created_at?: string
+          email?: string | null
           id?: string
           nome?: string
           time_id?: string | null
