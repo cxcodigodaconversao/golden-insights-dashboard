@@ -1,10 +1,10 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
@@ -55,6 +55,11 @@ export function GestaoClosers({ closers, times = [] }: GestaoClosersProps) {
   const [historicoDialogOpen, setHistoricoDialogOpen] = useState(false);
   const [selectedCloserHistorico, setSelectedCloserHistorico] = useState<Closer | null>(null);
   const [connectingCloserIds, setConnectingCloserIds] = useState<Set<string>>(new Set());
+  
+  // Google Calendar connection dialog state
+  const [googleConnectDialogOpen, setGoogleConnectDialogOpen] = useState(false);
+  const [selectedCloserForGoogle, setSelectedCloserForGoogle] = useState<Closer | null>(null);
+  const [googleEmail, setGoogleEmail] = useState("");
   
   const connectGoogleCalendar = useConnectCloserGoogleCalendar();
   const disconnectGoogleCalendar = useDisconnectCloserGoogleCalendar();
@@ -215,24 +220,40 @@ export function GestaoClosers({ closers, times = [] }: GestaoClosersProps) {
     setHistoricoDialogOpen(true);
   };
 
-  const handleConnectGoogleCalendar = (closer: Closer) => {
-    if (!closer.email) {
-      toast.error("Adicione um email ao closer antes de conectar o Google Calendar");
+  const handleOpenGoogleConnectDialog = (closer: Closer) => {
+    setSelectedCloserForGoogle(closer);
+    setGoogleEmail(closer.email || "");
+    setGoogleConnectDialogOpen(true);
+  };
+
+  const handleConnectGoogleCalendar = () => {
+    if (!selectedCloserForGoogle) return;
+    
+    if (!googleEmail.trim()) {
+      toast.error("Digite o email da conta Google");
       return;
     }
     
-    // Track connecting state per closer
-    setConnectingCloserIds(prev => new Set(prev).add(closer.id));
+    // Close dialog first
+    setGoogleConnectDialogOpen(false);
     
-    connectGoogleCalendar.mutate(closer.id, {
-      onSettled: () => {
-        setConnectingCloserIds(prev => {
-          const next = new Set(prev);
-          next.delete(closer.id);
-          return next;
-        });
+    // Track connecting state per closer
+    setConnectingCloserIds(prev => new Set(prev).add(selectedCloserForGoogle.id));
+    
+    connectGoogleCalendar.mutate(
+      { closerId: selectedCloserForGoogle.id, loginHint: googleEmail.trim() },
+      {
+        onSettled: () => {
+          setConnectingCloserIds(prev => {
+            const next = new Set(prev);
+            next.delete(selectedCloserForGoogle?.id || "");
+            return next;
+          });
+          setSelectedCloserForGoogle(null);
+          setGoogleEmail("");
+        }
       }
-    });
+    );
   };
 
   const handleDisconnectGoogleCalendar = (closerId: string) => {
@@ -405,8 +426,8 @@ export function GestaoClosers({ closers, times = [] }: GestaoClosersProps) {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => handleConnectGoogleCalendar(closer)}
-                            disabled={connectingCloserIds.has(closer.id) || !closer.email}
+                            onClick={() => handleOpenGoogleConnectDialog(closer)}
+                            disabled={connectingCloserIds.has(closer.id)}
                             className="h-7"
                           >
                             {connectingCloserIds.has(closer.id) ? (
@@ -597,6 +618,53 @@ export function GestaoClosers({ closers, times = [] }: GestaoClosersProps) {
           entidadeNome={selectedCloserHistorico.nome}
         />
       )}
+
+      {/* Dialog de Conexão Google Calendar */}
+      <Dialog open={googleConnectDialogOpen} onOpenChange={setGoogleConnectDialogOpen}>
+        <DialogContent className="bg-card border-border sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-foreground">Conectar Google Calendar</DialogTitle>
+            <DialogDescription className="text-muted-foreground">
+              Informe o email da conta Google que deseja conectar para <strong>{selectedCloserForGoogle?.nome}</strong>.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label className="text-foreground flex items-center gap-1">
+                <Mail className="h-3 w-3" /> Email da conta Google
+              </Label>
+              <Input
+                type="email"
+                value={googleEmail}
+                onChange={(e) => setGoogleEmail(e.target.value)}
+                placeholder="email@gmail.com"
+                className="bg-secondary border-border"
+                onKeyDown={(e) => e.key === "Enter" && handleConnectGoogleCalendar()}
+              />
+              <p className="text-xs text-muted-foreground">
+                Este email será sugerido na tela de login do Google. Você ainda poderá escolher outra conta.
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setGoogleConnectDialogOpen(false)} 
+              className="border-border"
+            >
+              Cancelar
+            </Button>
+            <Button 
+              onClick={handleConnectGoogleCalendar}
+              className="bg-primary text-primary-foreground"
+              disabled={!googleEmail.trim()}
+            >
+              <Calendar className="h-4 w-4 mr-2" />
+              Conectar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }

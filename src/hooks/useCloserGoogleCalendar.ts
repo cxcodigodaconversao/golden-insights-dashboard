@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { useEffect, useCallback } from "react";
+import { useEffect } from "react";
 
 export interface CloserGoogleToken {
   id: string;
@@ -33,6 +33,11 @@ export interface CreateEventResult {
   message?: string;
 }
 
+export interface ConnectCloserParams {
+  closerId: string;
+  loginHint?: string;
+}
+
 export function useCloserGoogleTokens(closerId?: string) {
   return useQuery({
     queryKey: ["google_tokens_closers", closerId],
@@ -56,7 +61,7 @@ export function useConnectCloserGoogleCalendar() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (closerId: string) => {
+    mutationFn: async ({ closerId, loginHint }: ConnectCloserParams) => {
       // Pre-open popup synchronously during user gesture to avoid blockers
       const width = 500;
       const height = 600;
@@ -75,15 +80,17 @@ export function useConnectCloserGoogleCalendar() {
         throw new Error("POPUP_BLOCKED");
       }
 
-      // Now fetch the auth URL
+      // Now fetch the auth URL with optional loginHint
       const { data, error } = await supabase.functions.invoke("google-calendar", {
-        body: { action: "get_auth_url_closer", closerId },
+        body: { action: "get_auth_url_closer", closerId, loginHint },
       });
 
       if (error) {
         popup.close();
         throw error;
       }
+
+      console.log("Auth URL response:", data);
 
       return { authUrl: data.authUrl as string, closerId, popup };
     },
