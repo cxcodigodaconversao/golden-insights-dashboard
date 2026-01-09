@@ -90,19 +90,35 @@ export function useConnectCloserGoogleCalendar() {
         throw error;
       }
 
-      console.log("Auth URL response:", data);
+       console.log("Auth URL response:", data);
 
-      return { authUrl: data.authUrl as string, closerId, popup };
+       return {
+         authUrl: data.authUrl as string,
+         redirectUri: (data.redirectUri as string | undefined) ?? undefined,
+         closerId,
+         popup,
+       };
     },
-    onSuccess: ({ authUrl, closerId, popup }) => {
-      // Navigate popup to auth URL
-      if (popup && !popup.closed) {
-        popup.location.href = authUrl;
-      } else {
-        // Fallback: open in new tab if popup was closed
-        window.open(authUrl, "_blank");
-        toast.info("Login do Google aberto em nova aba");
-      }
+     onSuccess: ({ authUrl, redirectUri, closerId, popup }) => {
+       // Help operator configure Google OAuth client if needed
+       if (redirectUri) {
+         // Best-effort copy to clipboard (won't throw if blocked)
+         try {
+           navigator.clipboard?.writeText(redirectUri);
+         } catch {
+           // ignore
+         }
+         toast.info(`Redirect URI copiado: ${redirectUri}`);
+       }
+
+       // Navigate popup to auth URL
+       if (popup && !popup.closed) {
+         popup.location.href = authUrl;
+       } else {
+         // Fallback: open in new tab if popup was closed
+         window.open(authUrl, "_blank");
+         toast.info("Login do Google aberto em nova aba");
+       }
 
       // Listener para mensagem de sucesso
       const handleMessage = (event: MessageEvent) => {

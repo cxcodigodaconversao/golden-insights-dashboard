@@ -11,6 +11,27 @@ const GOOGLE_CLIENT_SECRET = Deno.env.get("GOOGLE_CLIENT_SECRET");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
+function getExternalOrigin(req: Request): string {
+  const url = new URL(req.url);
+  const forwardedProto = req.headers.get("x-forwarded-proto") || req.headers.get("X-Forwarded-Proto");
+  const forwardedHost = req.headers.get("x-forwarded-host") || req.headers.get("X-Forwarded-Host");
+
+  const host = forwardedHost || url.host;
+  let proto = (forwardedProto || url.protocol.replace(":", "") || "https").toLowerCase();
+
+  // In some deployments the internal request URL is http even though the public endpoint is https.
+  // Force https for known public hosts.
+  if (proto === "http" && (host.endsWith(".supabase.co") || host.includes("lovable"))) {
+    proto = "https";
+  }
+
+  return `${proto}://${host}`;
+}
+
+function getGoogleCalendarRedirectUri(req: Request): string {
+  return `${getExternalOrigin(req)}/functions/v1/google-calendar`;
+}
+
 serve(async (req) => {
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
@@ -58,9 +79,7 @@ serve(async (req) => {
           throw new Error("Google Calendar não está configurado. Configure GOOGLE_CLIENT_ID nas secrets.");
         }
 
-        // Derive redirect URI from the actual request URL for robustness
-        const reqUrl = new URL(req.url);
-        const redirectUri = `${reqUrl.origin}/functions/v1/google-calendar`;
+        const redirectUri = getGoogleCalendarRedirectUri(req);
         const scope = encodeURIComponent(
           "https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/calendar"
         );
@@ -92,12 +111,10 @@ serve(async (req) => {
           throw new Error("Google Calendar não está configurado. Configure GOOGLE_CLIENT_ID nas secrets.");
         }
 
-        // Derive redirect URI from the actual request URL for robustness
-        const reqUrl = new URL(req.url);
-        const redirectUri = `${reqUrl.origin}/functions/v1/google-calendar`;
-        const scope = encodeURIComponent(
-          "https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/calendar"
-        );
+         const redirectUri = getGoogleCalendarRedirectUri(req);
+         const scope = encodeURIComponent(
+           "https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/calendar"
+         );
         
         // Estado inclui o closer_id para identificar na callback
         const state = `closer:${closerId}`;
@@ -498,8 +515,8 @@ async function handleOAuthCallback(req: Request): Promise<Response> {
     SUPABASE_SERVICE_ROLE_KEY!
   );
 
-  // Derive redirect URI from the actual callback URL
-  const redirectUri = `${url.origin}${url.pathname}`;
+  // Derive redirect URI from the public-facing request (avoids http/https mismatch behind proxies)
+  const redirectUri = `${getExternalOrigin(req)}${url.pathname}`;
   console.log("Token exchange using redirectUri:", redirectUri);
 
   // Trocar código por tokens
