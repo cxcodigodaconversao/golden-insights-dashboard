@@ -328,6 +328,8 @@ export type Database = {
           bonus_extra: number | null
           comissao_percentual: number | null
           created_at: string
+          email: string | null
+          google_calendar_connected: boolean | null
           id: string
           nome: string
           time_id: string | null
@@ -337,6 +339,8 @@ export type Database = {
           bonus_extra?: number | null
           comissao_percentual?: number | null
           created_at?: string
+          email?: string | null
+          google_calendar_connected?: boolean | null
           id?: string
           nome: string
           time_id?: string | null
@@ -346,6 +350,8 @@ export type Database = {
           bonus_extra?: number | null
           comissao_percentual?: number | null
           created_at?: string
+          email?: string | null
+          google_calendar_connected?: boolean | null
           id?: string
           nome?: string
           time_id?: string | null
@@ -437,6 +443,50 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      google_tokens_closers: {
+        Row: {
+          access_token: string
+          closer_id: string
+          created_at: string | null
+          expires_at: string
+          id: string
+          refresh_token: string
+          scope: string | null
+          token_type: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          access_token: string
+          closer_id: string
+          created_at?: string | null
+          expires_at: string
+          id?: string
+          refresh_token: string
+          scope?: string | null
+          token_type?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          access_token?: string
+          closer_id?: string
+          created_at?: string | null
+          expires_at?: string
+          id?: string
+          refresh_token?: string
+          scope?: string | null
+          token_type?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "google_tokens_closers_closer_id_fkey"
+            columns: ["closer_id"]
+            isOneToOne: true
+            referencedRelation: "closers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       historico_interacoes: {
         Row: {
