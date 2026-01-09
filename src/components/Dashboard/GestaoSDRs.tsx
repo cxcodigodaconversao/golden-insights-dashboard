@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { Plus, UserCheck, UserX, Pencil, Trash2, Percent, Gift, History } from "lucide-react";
+import { Plus, UserCheck, UserX, Pencil, Trash2, Percent, Gift, History, Mail } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -30,6 +30,7 @@ interface SDR {
   time_id?: string | null;
   comissao_percentual?: number | null;
   bonus_extra?: number | null;
+  email?: string | null;
 }
 
 interface GestaoSDRsProps {
@@ -41,6 +42,7 @@ export function GestaoSDRs({ sdrs, times = [] }: GestaoSDRsProps) {
   const queryClient = useQueryClient();
   const { user, profile } = useAuth();
   const [novoSdr, setNovoSdr] = useState("");
+  const [novoEmail, setNovoEmail] = useState("");
   const [novoTimeId, setNovoTimeId] = useState<string>("");
   const [novaComissao, setNovaComissao] = useState<string>("");
   const [novoBonus, setNovoBonus] = useState<string>("");
@@ -81,6 +83,7 @@ export function GestaoSDRs({ sdrs, times = [] }: GestaoSDRsProps) {
     try {
       const { error } = await supabase.from("sdrs").insert({ 
         nome: novoSdr.trim(),
+        email: novoEmail.trim() || null,
         time_id: novoTimeId || null,
         comissao_percentual: novaComissao ? parseFloat(novaComissao) : 0,
         bonus_extra: novoBonus ? parseFloat(novoBonus) : 0
@@ -90,6 +93,7 @@ export function GestaoSDRs({ sdrs, times = [] }: GestaoSDRsProps) {
       toast.success("SDR adicionado com sucesso!");
       queryClient.invalidateQueries({ queryKey: ["sdrs"] });
       setNovoSdr("");
+      setNovoEmail("");
       setNovoTimeId("");
       setNovaComissao("");
       setNovoBonus("");
@@ -155,6 +159,7 @@ export function GestaoSDRs({ sdrs, times = [] }: GestaoSDRsProps) {
         .from("sdrs")
         .update({ 
           nome: editingSdr.nome.trim(),
+          email: editingSdr.email || null,
           time_id: editingSdr.time_id || null,
           comissao_percentual: editingSdr.comissao_percentual || 0,
           bonus_extra: editingSdr.bonus_extra || 0
@@ -220,6 +225,18 @@ export function GestaoSDRs({ sdrs, times = [] }: GestaoSDRsProps) {
               placeholder="Nome do novo SDR"
               className="bg-secondary border-border w-64"
               onKeyDown={(e) => e.key === "Enter" && handleAddSdr()}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label className="text-foreground flex items-center gap-1">
+              <Mail className="h-3 w-3" /> Email
+            </Label>
+            <Input
+              type="email"
+              value={novoEmail}
+              onChange={(e) => setNovoEmail(e.target.value)}
+              placeholder="email@exemplo.com"
+              className="bg-secondary border-border w-64"
             />
           </div>
           {timesAtivos.length > 0 && (
@@ -290,6 +307,7 @@ export function GestaoSDRs({ sdrs, times = [] }: GestaoSDRsProps) {
             <TableHeader>
               <TableRow className="border-border hover:bg-secondary/50">
                 <TableHead className="text-muted-foreground">Nome</TableHead>
+                <TableHead className="text-muted-foreground">Email</TableHead>
                 <TableHead className="text-muted-foreground">Time</TableHead>
                 <TableHead className="text-muted-foreground">Comissão</TableHead>
                 <TableHead className="text-muted-foreground">Bônus Extra</TableHead>
@@ -300,7 +318,7 @@ export function GestaoSDRs({ sdrs, times = [] }: GestaoSDRsProps) {
             <TableBody>
               {sdrs.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                  <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
                     Nenhum SDR cadastrado
                   </TableCell>
                 </TableRow>
@@ -310,6 +328,9 @@ export function GestaoSDRs({ sdrs, times = [] }: GestaoSDRsProps) {
                   return (
                     <TableRow key={sdr.id} className="border-border hover:bg-secondary/50">
                       <TableCell className="text-foreground font-medium">{sdr.nome}</TableCell>
+                      <TableCell className="text-foreground text-sm">
+                        {sdr.email || <span className="text-muted-foreground">-</span>}
+                      </TableCell>
                       <TableCell>
                         {time ? (
                           <Badge 
@@ -417,6 +438,18 @@ export function GestaoSDRs({ sdrs, times = [] }: GestaoSDRsProps) {
                   value={editingSdr.nome}
                   onChange={(e) => setEditingSdr({ ...editingSdr, nome: e.target.value })}
                   className="bg-secondary border-border"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-foreground flex items-center gap-1">
+                  <Mail className="h-3 w-3" /> Email
+                </Label>
+                <Input
+                  type="email"
+                  value={editingSdr.email || ""}
+                  onChange={(e) => setEditingSdr({ ...editingSdr, email: e.target.value || null })}
+                  className="bg-secondary border-border"
+                  placeholder="email@exemplo.com"
                 />
               </div>
               {timesAtivos.length > 0 && (

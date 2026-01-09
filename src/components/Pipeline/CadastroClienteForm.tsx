@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Form,
@@ -39,6 +40,7 @@ import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { CloserCalendarView } from "./CloserCalendarView";
 
 const formSchema = z.object({
   // Dados do Cliente
@@ -93,6 +95,7 @@ interface CloserWithEmail {
 export function CadastroClienteForm({ onSuccess }: CadastroClienteFormProps) {
   const [isOpen, setIsOpen] = useState(true);
   const [isCheckingAvailability, setIsCheckingAvailability] = useState(false);
+  const [showCalendarModal, setShowCalendarModal] = useState(false);
   const [availabilityStatus, setAvailabilityStatus] = useState<{
     available: boolean;
     reason?: string;
@@ -604,28 +607,41 @@ export function CadastroClienteForm({ onSuccess }: CadastroClienteFormProps) {
                           <FormLabel>
                             Closer <span className="text-destructive">*</span>
                           </FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Selecione o Closer" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {filteredClosers.map((closer) => {
-                                const closerWithEmail = closer as CloserWithEmail;
-                                return (
-                                  <SelectItem key={closer.id} value={closer.id}>
-                                    <div className="flex items-center gap-2">
-                                      {closer.nome}
-                                      {closerWithEmail.google_calendar_connected && (
-                                        <CalendarCheck className="h-3 w-3 text-green-500" />
-                                      )}
-                                    </div>
-                                  </SelectItem>
-                                );
-                              })}
-                            </SelectContent>
-                          </Select>
+                          <div className="flex gap-2">
+                            <Select onValueChange={field.onChange} value={field.value}>
+                              <FormControl>
+                                <SelectTrigger className="flex-1">
+                                  <SelectValue placeholder="Selecione o Closer" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {filteredClosers.map((closer) => {
+                                  const closerWithEmail = closer as CloserWithEmail;
+                                  return (
+                                    <SelectItem key={closer.id} value={closer.id}>
+                                      <div className="flex items-center gap-2">
+                                        {closer.nome}
+                                        {closerWithEmail.google_calendar_connected && (
+                                          <CalendarCheck className="h-3 w-3 text-green-500" />
+                                        )}
+                                      </div>
+                                    </SelectItem>
+                                  );
+                                })}
+                              </SelectContent>
+                            </Select>
+                            {selectedCloser?.google_calendar_connected && (
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="icon"
+                                onClick={() => setShowCalendarModal(true)}
+                                title="Ver agenda do closer"
+                              >
+                                <CalendarCheck className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -877,6 +893,28 @@ export function CadastroClienteForm({ onSuccess }: CadastroClienteFormProps) {
           </CardContent>
         </CollapsibleContent>
       </Card>
+
+      {/* Dialog do Calendário Visual */}
+      <Dialog open={showCalendarModal} onOpenChange={setShowCalendarModal}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Agenda do Closer</DialogTitle>
+          </DialogHeader>
+          {selectedCloser && (
+            <CloserCalendarView
+              closerId={selectedCloser.id}
+              closerNome={selectedCloser.nome}
+              onSelectSlot={(date, hora) => {
+                form.setValue("data_call", date);
+                form.setValue("hora_call", hora);
+                setShowCalendarModal(false);
+                toast.success(`Horário selecionado: ${format(date, "dd/MM/yyyy", { locale: ptBR })} às ${hora}`);
+              }}
+              onClose={() => setShowCalendarModal(false)}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </Collapsible>
   );
 }
