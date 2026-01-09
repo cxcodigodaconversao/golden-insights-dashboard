@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,13 +8,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { Plus, UserCheck, UserX, Pencil, Trash2, Percent, Gift, History } from "lucide-react";
+import { Plus, UserCheck, UserX, Pencil, Trash2, Percent, Gift, History, Calendar, Mail, Loader2, Unlink } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { registrarAlteracoesComissao } from "@/hooks/useComissaoHistorico";
 import { HistoricoComissaoDialog } from "./HistoricoComissaoDialog";
+import { useConnectCloserGoogleCalendar, useDisconnectCloserGoogleCalendar } from "@/hooks/useCloserGoogleCalendar";
 
 interface Time {
   id: string;
@@ -30,6 +31,8 @@ interface Closer {
   time_id?: string | null;
   comissao_percentual?: number | null;
   bonus_extra?: number | null;
+  email?: string | null;
+  google_calendar_connected?: boolean;
 }
 
 interface GestaoClosersProps {
@@ -41,6 +44,7 @@ export function GestaoClosers({ closers, times = [] }: GestaoClosersProps) {
   const queryClient = useQueryClient();
   const { user, profile } = useAuth();
   const [novoCloser, setNovoCloser] = useState("");
+  const [novoEmail, setNovoEmail] = useState("");
   const [novoTimeId, setNovoTimeId] = useState<string>("");
   const [novaComissao, setNovaComissao] = useState<string>("");
   const [novoBonus, setNovoBonus] = useState<string>("");
@@ -50,6 +54,9 @@ export function GestaoClosers({ closers, times = [] }: GestaoClosersProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [historicoDialogOpen, setHistoricoDialogOpen] = useState(false);
   const [selectedCloserHistorico, setSelectedCloserHistorico] = useState<Closer | null>(null);
+  
+  const connectGoogleCalendar = useConnectCloserGoogleCalendar();
+  const disconnectGoogleCalendar = useDisconnectCloserGoogleCalendar();
   
   // Store original values for comparison
   const originalValuesRef = useRef<{ comissao: number | null; bonus: number | null }>({ comissao: null, bonus: null });
@@ -81,6 +88,7 @@ export function GestaoClosers({ closers, times = [] }: GestaoClosersProps) {
     try {
       const { error } = await supabase.from("closers").insert({ 
         nome: novoCloser.trim(),
+        email: novoEmail.trim() || null,
         time_id: novoTimeId || null,
         comissao_percentual: novaComissao ? parseFloat(novaComissao) : 0,
         bonus_extra: novoBonus ? parseFloat(novoBonus) : 0
@@ -90,6 +98,7 @@ export function GestaoClosers({ closers, times = [] }: GestaoClosersProps) {
       toast.success("Closer adicionado com sucesso!");
       queryClient.invalidateQueries({ queryKey: ["closers"] });
       setNovoCloser("");
+      setNovoEmail("");
       setNovoTimeId("");
       setNovaComissao("");
       setNovoBonus("");
@@ -155,6 +164,7 @@ export function GestaoClosers({ closers, times = [] }: GestaoClosersProps) {
         .from("closers")
         .update({ 
           nome: editingCloser.nome.trim(),
+          email: editingCloser.email?.trim() || null,
           time_id: editingCloser.time_id || null,
           comissao_percentual: editingCloser.comissao_percentual || 0,
           bonus_extra: editingCloser.bonus_extra || 0
@@ -204,6 +214,18 @@ export function GestaoClosers({ closers, times = [] }: GestaoClosersProps) {
     setHistoricoDialogOpen(true);
   };
 
+  const handleConnectGoogleCalendar = (closer: Closer) => {
+    if (!closer.email) {
+      toast.error("Adicione um email ao closer antes de conectar o Google Calendar");
+      return;
+    }
+    connectGoogleCalendar.mutate(closer.id);
+  };
+
+  const handleDisconnectGoogleCalendar = (closerId: string) => {
+    disconnectGoogleCalendar.mutate(closerId);
+  };
+
   return (
     <Card className="border-border bg-card">
       <CardHeader>
@@ -218,8 +240,20 @@ export function GestaoClosers({ closers, times = [] }: GestaoClosersProps) {
               value={novoCloser}
               onChange={(e) => setNovoCloser(e.target.value)}
               placeholder="Nome do novo closer"
-              className="bg-secondary border-border w-64"
+              className="bg-secondary border-border w-48"
               onKeyDown={(e) => e.key === "Enter" && handleAddCloser()}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label className="text-foreground flex items-center gap-1">
+              <Mail className="h-3 w-3" /> Email
+            </Label>
+            <Input
+              type="email"
+              value={novoEmail}
+              onChange={(e) => setNovoEmail(e.target.value)}
+              placeholder="email@exemplo.com"
+              className="bg-secondary border-border w-56"
             />
           </div>
           {timesAtivos.length > 0 && (
@@ -257,12 +291,12 @@ export function GestaoClosers({ closers, times = [] }: GestaoClosersProps) {
               value={novaComissao}
               onChange={(e) => setNovaComissao(e.target.value)}
               placeholder="0"
-              className="bg-secondary border-border w-28"
+              className="bg-secondary border-border w-24"
             />
           </div>
           <div className="space-y-2">
             <Label className="text-foreground flex items-center gap-1">
-              <Gift className="h-3 w-3" /> Bônus Extra (R$)
+              <Gift className="h-3 w-3" /> Bônus (R$)
             </Label>
             <Input
               type="number"
@@ -271,7 +305,7 @@ export function GestaoClosers({ closers, times = [] }: GestaoClosersProps) {
               value={novoBonus}
               onChange={(e) => setNovoBonus(e.target.value)}
               placeholder="0"
-              className="bg-secondary border-border w-32"
+              className="bg-secondary border-border w-28"
             />
           </div>
           <Button
@@ -290,9 +324,11 @@ export function GestaoClosers({ closers, times = [] }: GestaoClosersProps) {
             <TableHeader>
               <TableRow className="border-border hover:bg-secondary/50">
                 <TableHead className="text-muted-foreground">Nome</TableHead>
+                <TableHead className="text-muted-foreground">Email</TableHead>
                 <TableHead className="text-muted-foreground">Time</TableHead>
                 <TableHead className="text-muted-foreground">Comissão</TableHead>
                 <TableHead className="text-muted-foreground">Bônus Extra</TableHead>
+                <TableHead className="text-muted-foreground">Google Calendar</TableHead>
                 <TableHead className="text-muted-foreground">Status</TableHead>
                 <TableHead className="text-muted-foreground text-right">Ações</TableHead>
               </TableRow>
@@ -300,7 +336,7 @@ export function GestaoClosers({ closers, times = [] }: GestaoClosersProps) {
             <TableBody>
               {closers.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                  <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
                     Nenhum closer cadastrado
                   </TableCell>
                 </TableRow>
@@ -310,6 +346,9 @@ export function GestaoClosers({ closers, times = [] }: GestaoClosersProps) {
                   return (
                     <TableRow key={closer.id} className="border-border hover:bg-secondary/50">
                       <TableCell className="text-foreground font-medium">{closer.nome}</TableCell>
+                      <TableCell className="text-foreground">
+                        {closer.email || <span className="text-muted-foreground text-sm">-</span>}
+                      </TableCell>
                       <TableCell>
                         {time ? (
                           <Badge 
@@ -331,6 +370,40 @@ export function GestaoClosers({ closers, times = [] }: GestaoClosersProps) {
                       </TableCell>
                       <TableCell className="text-foreground">
                         {formatCurrency(closer.bonus_extra)}
+                      </TableCell>
+                      <TableCell>
+                        {closer.google_calendar_connected ? (
+                          <div className="flex items-center gap-2">
+                            <Badge variant="default" className="bg-green-600">
+                              <Calendar className="h-3 w-3 mr-1" />
+                              Conectado
+                            </Badge>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDisconnectGoogleCalendar(closer.id)}
+                              className="h-7 px-2 text-destructive hover:text-destructive"
+                              disabled={disconnectGoogleCalendar.isPending}
+                            >
+                              <Unlink className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        ) : (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleConnectGoogleCalendar(closer)}
+                            disabled={connectGoogleCalendar.isPending || !closer.email}
+                            className="h-7"
+                          >
+                            {connectGoogleCalendar.isPending ? (
+                              <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                            ) : (
+                              <Calendar className="h-3 w-3 mr-1" />
+                            )}
+                            Conectar
+                          </Button>
+                        )}
                       </TableCell>
                       <TableCell>
                         <Badge variant={closer.ativo ? "default" : "secondary"}>
@@ -417,6 +490,18 @@ export function GestaoClosers({ closers, times = [] }: GestaoClosersProps) {
                   value={editingCloser.nome}
                   onChange={(e) => setEditingCloser({ ...editingCloser, nome: e.target.value })}
                   className="bg-secondary border-border"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-foreground flex items-center gap-1">
+                  <Mail className="h-3 w-3" /> Email
+                </Label>
+                <Input
+                  type="email"
+                  value={editingCloser.email || ""}
+                  onChange={(e) => setEditingCloser({ ...editingCloser, email: e.target.value })}
+                  className="bg-secondary border-border"
+                  placeholder="email@exemplo.com"
                 />
               </div>
               {timesAtivos.length > 0 && (

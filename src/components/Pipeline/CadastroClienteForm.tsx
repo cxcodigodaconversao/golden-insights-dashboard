@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Form,
   FormControl,
@@ -24,7 +25,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { UserPlus, ChevronDown, ChevronUp, Loader2, CalendarIcon } from "lucide-react";
+import { UserPlus, ChevronDown, ChevronUp, Loader2, CalendarIcon, AlertCircle, CheckCircle2, Calendar as CalendarCheck } from "lucide-react";
 import {
   useCreateClientePipeline,
   STATUS_ATENDIMENTO,
@@ -32,9 +33,12 @@ import {
 import { useSegmentos } from "@/hooks/useSegmentos";
 import { useClosers, useSdrs, useOrigens, useTimes } from "@/hooks/useAtendimentos";
 import { useClientes } from "@/hooks/useClientes";
+import { useCheckCloserAvailability, useCreateCloserCalendarEvent } from "@/hooks/useCloserGoogleCalendar";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 const formSchema = z.object({
   // Dados do Cliente
@@ -77,9 +81,29 @@ interface CadastroClienteFormProps {
   onSuccess?: () => void;
 }
 
+interface CloserWithEmail {
+  id: string;
+  nome: string;
+  ativo: boolean;
+  time_id?: string | null;
+  email?: string | null;
+  google_calendar_connected?: boolean;
+}
+
 export function CadastroClienteForm({ onSuccess }: CadastroClienteFormProps) {
   const [isOpen, setIsOpen] = useState(true);
+  const [isCheckingAvailability, setIsCheckingAvailability] = useState(false);
+  const [availabilityStatus, setAvailabilityStatus] = useState<{
+    available: boolean;
+    reason?: string;
+    message?: string;
+    conflictingEvents?: Array<{ summary: string; start: string; end: string }>;
+  } | null>(null);
+  
   const createCliente = useCreateClientePipeline();
+  const checkAvailability = useCheckCloserAvailability();
+  const createCalendarEvent = useCreateCloserCalendarEvent();
+  
   const { data: segmentos = [] } = useSegmentos();
   const { data: closers = [] } = useClosers();
   const { data: sdrs = [] } = useSdrs();
@@ -119,6 +143,9 @@ export function CadastroClienteForm({ onSuccess }: CadastroClienteFormProps) {
   });
 
   const selectedTeamId = useWatch({ control: form.control, name: "time_id" });
+  const selectedCloserId = useWatch({ control: form.control, name: "closer_id" });
+  const selectedDate = useWatch({ control: form.control, name: "data_call" });
+  const selectedHora = useWatch({ control: form.control, name: "hora_call" });
 
   const filteredSdrs = useMemo(() => {
     if (!selectedTeamId) return sdrs;
@@ -130,6 +157,7 @@ export function CadastroClienteForm({ onSuccess }: CadastroClienteFormProps) {
     return closers.filter((c) => c.time_id === selectedTeamId);
   }, [closers, selectedTeamId]);
 
+  // Reset selections when team changes
   useEffect(() => {
     const currentSdrId = form.getValues("sdr_id");
     if (currentSdrId && !filteredSdrs.some((s) => s.id === currentSdrId)) {
@@ -139,13 +167,68 @@ export function CadastroClienteForm({ onSuccess }: CadastroClienteFormProps) {
     const currentCloserId = form.getValues("closer_id");
     if (currentCloserId && !filteredClosers.some((c) => c.id === currentCloserId)) {
       form.setValue("closer_id", "");
+      setAvailabilityStatus(null);
     }
   }, [selectedTeamId, filteredSdrs, filteredClosers, form]);
 
-  const onSubmit = (data: FormData) => {
-    // Buscar nomes pelos IDs
+  // Check availability when closer, date and time are selected
+  useEffect(() => {
+    const checkCloserAvailability = async () => {
+      if (!selectedCloserId || !selectedDate || !selectedHora) {
+        setAvailabilityStatus(null);
+        return;
+      }
+
+      // Find closer to check if has google calendar connected
+      const closer = closers.find(c => c.id === selectedCloserId) as CloserWithEmail | undefined;
+      if (!closer?.google_calendar_connected) {
+        setAvailabilityStatus(null);
+        return;
+      }
+
+      setIsCheckingAvailability(true);
+
+      try {
+        // Create datetime of start
+        const [hours, minutes] = selectedHora.split(":").map(Number);
+        const startDate = new Date(selectedDate);
+        startDate.setHours(hours, minutes, 0, 0);
+        
+        // Create datetime of end (1 hour later)
+        const endDate = new Date(startDate);
+        endDate.setHours(endDate.getHours() + 1);
+
+        const result = await checkAvailability.mutateAsync({
+          closerId: selectedCloserId,
+          startDateTime: startDate.toISOString(),
+          endDateTime: endDate.toISOString(),
+        });
+
+        setAvailabilityStatus(result);
+      } catch (error) {
+        console.error("Erro ao verificar disponibilidade:", error);
+        setAvailabilityStatus(null);
+      } finally {
+        setIsCheckingAvailability(false);
+      }
+    };
+
+    // Debounce the check
+    const timeoutId = setTimeout(checkCloserAvailability, 500);
+    return () => clearTimeout(timeoutId);
+  }, [selectedCloserId, selectedDate, selectedHora, closers]);
+
+  const onSubmit = async (data: FormData) => {
+    // Check if blocked due to unavailability
+    const closer = closers.find(c => c.id === data.closer_id) as CloserWithEmail | undefined;
+    if (closer?.google_calendar_connected && availabilityStatus && !availabilityStatus.available) {
+      toast.error("Este horário está ocupado. Escolha outro horário.");
+      return;
+    }
+
+    // Find names by IDs
     const sdrSelecionado = sdrs.find(s => s.id === data.sdr_id);
-    const closerSelecionado = closers.find(c => c.id === data.closer_id);
+    const closerSelecionado = closers.find(c => c.id === data.closer_id) as CloserWithEmail | undefined;
     const origemSelecionada = origens.find(o => o.id === data.origem_id);
 
     createCliente.mutate(
@@ -176,15 +259,61 @@ export function CadastroClienteForm({ onSuccess }: CadastroClienteFormProps) {
         observacoes: data.observacoes || undefined,
       },
       {
-        onSuccess: () => {
+        onSuccess: async (createdClient) => {
+          // Create Google Calendar event if closer has calendar connected and date/time is set
+          if (
+            closerSelecionado?.google_calendar_connected && 
+            data.data_call && 
+            data.hora_call
+          ) {
+            try {
+              const [hours, minutes] = data.hora_call.split(":").map(Number);
+              const startDate = new Date(data.data_call);
+              startDate.setHours(hours, minutes, 0, 0);
+              
+              const endDate = new Date(startDate);
+              endDate.setHours(endDate.getHours() + 1);
+
+              const attendees = [
+                closerSelecionado.email,
+                data.email,
+              ].filter(Boolean) as string[];
+
+              const eventResult = await createCalendarEvent.mutateAsync({
+                closerId: data.closer_id,
+                title: `Call - ${data.nome}`,
+                description: `Lead: ${data.nome}\nWhatsApp: ${data.whatsapp}\nEmpresa: ${data.empresa || '-'}\n\nInfo SDR: ${data.info_sdr || '-'}`,
+                startDateTime: startDate.toISOString(),
+                endDateTime: endDate.toISOString(),
+                attendees,
+              });
+
+              // If event was created, update the lead with the meet link
+              if (eventResult.success && eventResult.meetLink && createdClient?.id) {
+                await supabase
+                  .from("clientes_pipeline")
+                  .update({ 
+                    gravacao: eventResult.meetLink,
+                  })
+                  .eq("id", createdClient.id);
+                
+                toast.success("Evento criado no Google Calendar com link do Meet!");
+              }
+            } catch (error) {
+              console.error("Erro ao criar evento no calendário:", error);
+              // Don't block the success - lead was created
+            }
+          }
+
           form.reset();
+          setAvailabilityStatus(null);
           onSuccess?.();
         },
       }
     );
   };
 
-  // Máscara de WhatsApp
+  // WhatsApp mask
   const formatWhatsApp = (value: string) => {
     const numbers = value.replace(/\D/g, "");
     if (numbers.length <= 2) return `(${numbers}`;
@@ -194,6 +323,9 @@ export function CadastroClienteForm({ onSuccess }: CadastroClienteFormProps) {
       return `(${numbers.slice(0, 2)}) ${numbers.slice(2, 7)}-${numbers.slice(7)}`;
     return `(${numbers.slice(0, 2)}) ${numbers.slice(2, 7)}-${numbers.slice(7, 11)}`;
   };
+
+  const selectedCloser = closers.find(c => c.id === selectedCloserId) as CloserWithEmail | undefined;
+  const showAvailabilityCheck = selectedCloser?.google_calendar_connected && selectedDate && selectedHora;
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
@@ -361,10 +493,10 @@ export function CadastroClienteForm({ onSuccess }: CadastroClienteFormProps) {
                       control={form.control}
                       name="data_call"
                       render={({ field }) => (
-            <FormItem>
-              <FormLabel>Data da Call</FormLabel>
-              <Popover>
-                <PopoverTrigger asChild>
+                        <FormItem>
+                          <FormLabel>Data da Call</FormLabel>
+                          <Popover>
+                            <PopoverTrigger asChild>
                               <FormControl>
                                 <Button
                                   variant="outline"
@@ -479,11 +611,19 @@ export function CadastroClienteForm({ onSuccess }: CadastroClienteFormProps) {
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              {filteredClosers.map((closer) => (
-                                <SelectItem key={closer.id} value={closer.id}>
-                                  {closer.nome}
-                                </SelectItem>
-                              ))}
+                              {filteredClosers.map((closer) => {
+                                const closerWithEmail = closer as CloserWithEmail;
+                                return (
+                                  <SelectItem key={closer.id} value={closer.id}>
+                                    <div className="flex items-center gap-2">
+                                      {closer.nome}
+                                      {closerWithEmail.google_calendar_connected && (
+                                        <CalendarCheck className="h-3 w-3 text-green-500" />
+                                      )}
+                                    </div>
+                                  </SelectItem>
+                                );
+                              })}
                             </SelectContent>
                           </Select>
                           <FormMessage />
@@ -547,6 +687,46 @@ export function CadastroClienteForm({ onSuccess }: CadastroClienteFormProps) {
                       )}
                     />
                   </div>
+
+                  {/* Availability Status */}
+                  {showAvailabilityCheck && (
+                    <div className="mt-4">
+                      {isCheckingAvailability ? (
+                        <Alert>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          <AlertDescription>
+                            Verificando disponibilidade do closer...
+                          </AlertDescription>
+                        </Alert>
+                      ) : availabilityStatus ? (
+                        availabilityStatus.available ? (
+                          <Alert className="border-green-500 bg-green-50 dark:bg-green-950/20">
+                            <CheckCircle2 className="h-4 w-4 text-green-600" />
+                            <AlertDescription className="text-green-700 dark:text-green-400">
+                              Horário disponível! O evento será criado automaticamente no Google Calendar do closer.
+                            </AlertDescription>
+                          </Alert>
+                        ) : (
+                          <Alert variant="destructive">
+                            <AlertCircle className="h-4 w-4" />
+                            <AlertDescription>
+                              <p className="font-semibold">Este horário está ocupado!</p>
+                              {availabilityStatus.conflictingEvents && availabilityStatus.conflictingEvents.length > 0 && (
+                                <ul className="mt-2 text-sm">
+                                  {availabilityStatus.conflictingEvents.map((event, index) => (
+                                    <li key={index}>
+                                      • {event.summary || "Evento sem título"} - {new Date(event.start).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                                    </li>
+                                  ))}
+                                </ul>
+                              )}
+                              <p className="mt-2">Escolha outro horário para continuar.</p>
+                            </AlertDescription>
+                          </Alert>
+                        )
+                      ) : null}
+                    </div>
+                  )}
                 </div>
 
                 {/* Dados da Negociação */}
@@ -672,11 +852,20 @@ export function CadastroClienteForm({ onSuccess }: CadastroClienteFormProps) {
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => form.reset()}
+                    onClick={() => {
+                      form.reset();
+                      setAvailabilityStatus(null);
+                    }}
                   >
                     Limpar
                   </Button>
-                  <Button type="submit" disabled={createCliente.isPending}>
+                  <Button 
+                    type="submit" 
+                    disabled={
+                      createCliente.isPending || 
+                      (selectedCloser?.google_calendar_connected && availabilityStatus && !availabilityStatus.available)
+                    }
+                  >
                     {createCliente.isPending && (
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                     )}
