@@ -54,6 +54,7 @@ export function GestaoClosers({ closers, times = [] }: GestaoClosersProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [historicoDialogOpen, setHistoricoDialogOpen] = useState(false);
   const [selectedCloserHistorico, setSelectedCloserHistorico] = useState<Closer | null>(null);
+  const [connectingCloserIds, setConnectingCloserIds] = useState<Set<string>>(new Set());
   
   const connectGoogleCalendar = useConnectCloserGoogleCalendar();
   const disconnectGoogleCalendar = useDisconnectCloserGoogleCalendar();
@@ -219,7 +220,19 @@ export function GestaoClosers({ closers, times = [] }: GestaoClosersProps) {
       toast.error("Adicione um email ao closer antes de conectar o Google Calendar");
       return;
     }
-    connectGoogleCalendar.mutate(closer.id);
+    
+    // Track connecting state per closer
+    setConnectingCloserIds(prev => new Set(prev).add(closer.id));
+    
+    connectGoogleCalendar.mutate(closer.id, {
+      onSettled: () => {
+        setConnectingCloserIds(prev => {
+          const next = new Set(prev);
+          next.delete(closer.id);
+          return next;
+        });
+      }
+    });
   };
 
   const handleDisconnectGoogleCalendar = (closerId: string) => {
@@ -393,15 +406,15 @@ export function GestaoClosers({ closers, times = [] }: GestaoClosersProps) {
                             variant="outline"
                             size="sm"
                             onClick={() => handleConnectGoogleCalendar(closer)}
-                            disabled={connectGoogleCalendar.isPending || !closer.email}
+                            disabled={connectingCloserIds.has(closer.id) || !closer.email}
                             className="h-7"
                           >
-                            {connectGoogleCalendar.isPending ? (
+                            {connectingCloserIds.has(closer.id) ? (
                               <Loader2 className="h-3 w-3 animate-spin mr-1" />
                             ) : (
                               <Calendar className="h-3 w-3 mr-1" />
                             )}
-                            Conectar
+                            {connectingCloserIds.has(closer.id) ? "Conectando..." : "Conectar"}
                           </Button>
                         )}
                       </TableCell>
