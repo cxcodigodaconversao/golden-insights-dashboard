@@ -57,25 +57,45 @@ export function useConnectCloserGoogleCalendar() {
 
   return useMutation({
     mutationFn: async (closerId: string) => {
-      const { data, error } = await supabase.functions.invoke("google-calendar", {
-        body: { action: "get_auth_url_closer", closerId },
-      });
-
-      if (error) throw error;
-      return { authUrl: data.authUrl as string, closerId };
-    },
-    onSuccess: ({ authUrl, closerId }) => {
-      // Abrir popup para autenticação
+      // Pre-open popup synchronously during user gesture to avoid blockers
       const width = 500;
       const height = 600;
       const left = window.screenX + (window.outerWidth - width) / 2;
       const top = window.screenY + (window.outerHeight - height) / 2;
-
-      const popup = window.open(
-        authUrl,
+      
+      // Use window.top when in iframe, fallback to window
+      const windowRef = window.top || window;
+      const popup = windowRef.open(
+        "about:blank",
         `google-auth-closer-${closerId}`,
         `width=${width},height=${height},left=${left},top=${top}`
       );
+
+      if (!popup || popup.closed) {
+        throw new Error("POPUP_BLOCKED");
+      }
+
+      // Now fetch the auth URL
+      const { data, error } = await supabase.functions.invoke("google-calendar", {
+        body: { action: "get_auth_url_closer", closerId },
+      });
+
+      if (error) {
+        popup.close();
+        throw error;
+      }
+
+      return { authUrl: data.authUrl as string, closerId, popup };
+    },
+    onSuccess: ({ authUrl, closerId, popup }) => {
+      // Navigate popup to auth URL
+      if (popup && !popup.closed) {
+        popup.location.href = authUrl;
+      } else {
+        // Fallback: open in new tab if popup was closed
+        window.open(authUrl, "_blank");
+        toast.info("Login do Google aberto em nova aba");
+      }
 
       // Listener para mensagem de sucesso
       const handleMessage = (event: MessageEvent) => {
@@ -94,12 +114,17 @@ export function useConnectCloserGoogleCalendar() {
           clearInterval(checkClosed);
           queryClient.invalidateQueries({ queryKey: ["google_tokens_closers", closerId] });
           queryClient.invalidateQueries({ queryKey: ["closers"] });
+          window.removeEventListener("message", handleMessage);
         }
       }, 1000);
     },
     onError: (error) => {
       console.error("Erro ao conectar Google Calendar do closer:", error);
-      toast.error("Erro ao conectar com Google Calendar");
+      if (error instanceof Error && error.message === "POPUP_BLOCKED") {
+        toast.error("Popup bloqueado! Permita popups ou tente em uma nova aba.");
+      } else {
+        toast.error("Erro ao conectar com Google Calendar");
+      }
     },
   });
 }
