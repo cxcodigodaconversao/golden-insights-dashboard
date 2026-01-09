@@ -110,6 +110,95 @@ serve(async (req) => {
         });
       }
 
+      case "get_day_events": {
+        // Get all events for a specific day
+        const { closerId, date } = params;
+        
+        if (!closerId || !date) {
+          throw new Error("closerId e date são obrigatórios");
+        }
+
+        // Fetch closer tokens
+        const { data: tokenData, error: tokenError } = await supabase
+          .from("google_tokens_closers")
+          .select("*")
+          .eq("closer_id", closerId)
+          .single();
+
+        if (tokenError || !tokenData) {
+          console.log("Closer não tem Google Calendar conectado");
+          return new Response(JSON.stringify({ 
+            events: [], 
+            hasCalendar: false 
+          }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        // Refresh token if expired
+        let accessToken = tokenData.access_token;
+        if (new Date(tokenData.expires_at) < new Date()) {
+          try {
+            accessToken = await refreshCloserAccessToken(tokenData.refresh_token, closerId, supabase);
+          } catch (refreshError) {
+            console.error("Erro ao renovar token:", refreshError);
+            return new Response(JSON.stringify({ 
+              events: [], 
+              hasCalendar: false,
+              error: "Token expired" 
+            }), {
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
+        }
+
+        // Create start and end of day
+        const dayDate = new Date(date);
+        const startOfDay = new Date(dayDate);
+        startOfDay.setHours(0, 0, 0, 0);
+        
+        const endOfDay = new Date(dayDate);
+        endOfDay.setHours(23, 59, 59, 999);
+
+        // Fetch events from Google Calendar
+        const timeMin = encodeURIComponent(startOfDay.toISOString());
+        const timeMax = encodeURIComponent(endOfDay.toISOString());
+        
+        const response = await fetch(
+          `https://www.googleapis.com/calendar/v3/calendars/primary/events?` +
+          `timeMin=${timeMin}&timeMax=${timeMax}&singleEvents=true&orderBy=startTime`,
+          {
+            headers: { Authorization: `Bearer ${accessToken}` },
+          }
+        );
+
+        if (!response.ok) {
+          const errorData = await response.text();
+          console.error("Erro ao buscar eventos:", errorData);
+          return new Response(JSON.stringify({ 
+            events: [], 
+            hasCalendar: true,
+            error: "API error" 
+          }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        const data = await response.json();
+        const events = (data.items || []).filter((event: any) => 
+          event.status !== 'cancelled'
+        );
+
+        console.log(`Found ${events.length} events for closer ${closerId} on ${date}`);
+
+        return new Response(JSON.stringify({ 
+          events,
+          hasCalendar: true 
+        }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
       case "check_availability": {
         // Verificar disponibilidade do closer
         const { closerId, startDateTime, endDateTime } = params;

@@ -189,6 +189,34 @@ export function useCreateCloserCalendarEvent() {
   });
 }
 
+// Hook to fetch day events for a closer
+export function useCloserDayEvents() {
+  return useMutation({
+    mutationFn: async (params: {
+      closerId: string;
+      date: string; // ISO date string
+    }) => {
+      const { data, error } = await supabase.functions.invoke("google-calendar", {
+        body: {
+          action: "get_day_events",
+          ...params,
+        },
+      });
+
+      if (error) throw error;
+      return data as {
+        events: Array<{
+          id: string;
+          summary: string;
+          start: { dateTime?: string; date?: string };
+          end: { dateTime?: string; date?: string };
+        }>;
+        hasCalendar: boolean;
+      };
+    },
+  });
+}
+
 // Hook para verificar disponibilidade em tempo real
 export function useAvailabilityCheck(
   closerId: string | undefined,
