@@ -58,7 +58,9 @@ serve(async (req) => {
           throw new Error("Google Calendar não está configurado. Configure GOOGLE_CLIENT_ID nas secrets.");
         }
 
-        const redirectUri = `${SUPABASE_URL}/functions/v1/google-calendar`;
+        // Derive redirect URI from the actual request URL for robustness
+        const reqUrl = new URL(req.url);
+        const redirectUri = `${reqUrl.origin}/functions/v1/google-calendar`;
         const scope = encodeURIComponent(
           "https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/calendar"
         );
@@ -69,17 +71,19 @@ serve(async (req) => {
           `&response_type=code` +
           `&scope=${scope}` +
           `&access_type=offline` +
-          `&prompt=consent` +
+          `&prompt=consent%20select_account` +
           `&state=${user.id}`;
 
-        return new Response(JSON.stringify({ authUrl }), {
+        console.log("Generated redirectUri:", redirectUri);
+
+        return new Response(JSON.stringify({ authUrl, redirectUri }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
 
       case "get_auth_url_closer": {
         // Gerar URL de autenticação do Google para um closer específico
-        const { closerId } = params;
+        const { closerId, loginHint } = params;
         if (!closerId) {
           throw new Error("closerId é obrigatório");
         }
@@ -88,7 +92,9 @@ serve(async (req) => {
           throw new Error("Google Calendar não está configurado. Configure GOOGLE_CLIENT_ID nas secrets.");
         }
 
-        const redirectUri = `${SUPABASE_URL}/functions/v1/google-calendar`;
+        // Derive redirect URI from the actual request URL for robustness
+        const reqUrl = new URL(req.url);
+        const redirectUri = `${reqUrl.origin}/functions/v1/google-calendar`;
         const scope = encodeURIComponent(
           "https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/calendar"
         );
@@ -96,16 +102,24 @@ serve(async (req) => {
         // Estado inclui o closer_id para identificar na callback
         const state = `closer:${closerId}`;
         
-        const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
+        let authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
           `client_id=${GOOGLE_CLIENT_ID}` +
           `&redirect_uri=${encodeURIComponent(redirectUri)}` +
           `&response_type=code` +
           `&scope=${scope}` +
           `&access_type=offline` +
-          `&prompt=consent` +
+          `&prompt=consent%20select_account` +
           `&state=${state}`;
 
-        return new Response(JSON.stringify({ authUrl }), {
+        // Add login_hint if provided to suggest the email
+        if (loginHint) {
+          authUrl += `&login_hint=${encodeURIComponent(loginHint)}`;
+        }
+
+        console.log("Generated redirectUri for closer:", redirectUri);
+        console.log("Login hint:", loginHint || "none");
+
+        return new Response(JSON.stringify({ authUrl, redirectUri }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
@@ -484,6 +498,10 @@ async function handleOAuthCallback(req: Request): Promise<Response> {
     SUPABASE_SERVICE_ROLE_KEY!
   );
 
+  // Derive redirect URI from the actual callback URL
+  const redirectUri = `${url.origin}${url.pathname}`;
+  console.log("Token exchange using redirectUri:", redirectUri);
+
   // Trocar código por tokens
   const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
@@ -492,7 +510,7 @@ async function handleOAuthCallback(req: Request): Promise<Response> {
       code,
       client_id: GOOGLE_CLIENT_ID!,
       client_secret: GOOGLE_CLIENT_SECRET!,
-      redirect_uri: `${SUPABASE_URL}/functions/v1/google-calendar`,
+      redirect_uri: redirectUri,
       grant_type: "authorization_code",
     }),
   });
