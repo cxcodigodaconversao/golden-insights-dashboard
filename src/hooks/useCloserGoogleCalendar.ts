@@ -73,7 +73,7 @@ export function useConnectCloserGoogleCalendar() {
 
       const popup = window.open(
         authUrl,
-        "google-auth-closer",
+        `google-auth-closer-${closerId}`,
         `width=${width},height=${height},left=${left},top=${top}`
       );
 
