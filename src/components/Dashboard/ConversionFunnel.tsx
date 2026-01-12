@@ -39,8 +39,9 @@ export function ConversionFunnel({ data }: ConversionFunnelProps) {
     <div className="space-y-4">
       {funnelData.map((step, index) => {
         const width = (step.value / maxValue) * 100;
-        const previousValue = index > 0 ? funnelData[index - 1].value : step.value;
-        const conversionRate = previousValue > 0 ? ((step.value / previousValue) * 100).toFixed(1) : "0";
+        // Para Vendas (index 3), usar Compareceram (index 1) como base, não Em Negociação
+        const baseValue = index === 3 ? funnelData[1].value : (index > 0 ? funnelData[index - 1].value : step.value);
+        const conversionRate = baseValue > 0 ? ((step.value / baseValue) * 100).toFixed(1) : "0";
 
         return (
           <div key={step.label} className="space-y-2">

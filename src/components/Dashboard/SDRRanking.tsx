@@ -60,7 +60,10 @@ export function SDRRanking({ data, sdrsList, times = [], sdrs = [] }: SDRRanking
       };
     });
 
-    return Object.values(sdrMap).sort((a, b) => b.agendamentos - a.agendamentos);
+    return Object.values(sdrMap).sort((a, b) => {
+      if (b.vendas !== a.vendas) return b.vendas - a.vendas;
+      return b.receita - a.receita;
+    });
   }, [data, sdrsList]);
 
   const formatCurrency = (value: number) => {
