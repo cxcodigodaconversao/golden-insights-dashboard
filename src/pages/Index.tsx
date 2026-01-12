@@ -18,7 +18,7 @@ import { GestaoMetas } from "@/components/Dashboard/GestaoMetas";
 import { GestaoNotificacoes } from "@/components/Dashboard/GestaoNotificacoes";
 import { ResumoMetas } from "@/components/Dashboard/ResumoMetas";
 import { ComissoesView } from "@/components/Dashboard/ComissoesView";
-import { LancamentoSDRPage } from "@/components/Dashboard/LancamentoSDRPage";
+
 import { ResumoSemanal } from "@/components/Dashboard/ResumoSemanal";
 import { ImportExcel } from "@/components/Dashboard/ImportExcel";
 import { ExportExcel } from "@/components/Dashboard/ExportExcel";
@@ -29,7 +29,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useDeletedLeadsCount } from "@/hooks/useLeads";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { LayoutDashboard, Users, Headphones, Globe, FileSpreadsheet, Calendar, Shield, Crown, UserCog, Target, Bell, BarChart3, DollarSign, Building2, Trash2, Columns3 } from "lucide-react";
+import { LayoutDashboard, Users, Headphones, Globe, Calendar, Shield, Crown, UserCog, Target, Bell, BarChart3, DollarSign, Building2, Trash2, Columns3 } from "lucide-react";
 import { startOfMonth, endOfMonth, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 const Index = () => {
@@ -212,7 +212,7 @@ const Index = () => {
   // - Vendedor/SDR: apenas dashboard e resumo metas (próprios resultados)
   const canSeeDashboard = true;
   const canSeeResumo = isAdmin || isLider;
-  const canSeeLancamentos = isAdmin || isLider || isVendedor || isSdr;
+  
   const canSeeMetas = isAdmin;
   const canSeeResumoMetas = !isCliente;
   const canSeeComissoes = !isCliente;
@@ -255,12 +255,6 @@ const Index = () => {
                   <Calendar className="h-4 w-4" />
                   <span className="hidden sm:inline">Resumo</span>
                 </TabsTrigger>}
-              {canSeeLancamentos && <>
-                  <TabsTrigger value="lancamentos-sdr" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2">
-                    <FileSpreadsheet className="h-4 w-4" />
-                    <span className="hidden sm:inline">Registros SDR</span>
-                  </TabsTrigger>
-                </>}
               {canSeeGestao && <>
                   <TabsTrigger value="times" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2">
                     <Shield className="h-4 w-4" />
@@ -364,16 +358,6 @@ const Index = () => {
             </TabsContent>}
 
 
-          {canSeeLancamentos && <>
-              <TabsContent value="lancamentos-sdr" className="space-y-6">
-                <div className="opacity-0 animate-fade-in">
-                  <h2 className="font-display text-2xl sm:text-3xl font-bold text-foreground">Lançamentos SDR</h2>
-                  <p className="text-sm text-muted-foreground">Registre as atividades diárias dos SDRs</p>
-                </div>
-                <LancamentoSDRPage />
-              </TabsContent>
-
-            </>}
 
           {canSeeGestao && <>
               <TabsContent value="times" className="space-y-6">
