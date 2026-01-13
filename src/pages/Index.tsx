@@ -29,7 +29,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { useDeletedLeadsCount } from "@/hooks/useLeads";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { LayoutDashboard, Users, Headphones, Globe, Calendar, Shield, Crown, UserCog, Target, Bell, BarChart3, DollarSign, Building2, Trash2, Columns3 } from "lucide-react";
+import { LayoutDashboard, Users, Headphones, Globe, Calendar, Shield, Crown, UserCog, Target, Bell, BarChart3, DollarSign, Building2, Trash2, Columns3, Radar, ArrowLeft } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { startOfMonth, endOfMonth, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 const Index = () => {
@@ -246,6 +247,10 @@ const Index = () => {
                 <LayoutDashboard className="h-4 w-4" />
                 <span className="hidden sm:inline">Dashboard</span>
               </TabsTrigger>
+              <TabsTrigger value="radar-conversao" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2">
+                <Radar className="h-4 w-4" />
+                <span className="hidden sm:inline">Radar</span>
+              </TabsTrigger>
               {canSeePipeline && <TabsTrigger value="pipeline" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2">
                   <Columns3 className="h-4 w-4" />
                   <span className="hidden sm:inline">Cadastro de Leads
@@ -339,6 +344,25 @@ const Index = () => {
             </div>
             
             {showClienteDashboard ? <ClienteDashboard /> : showIndividualDashboard ? <MeuDashboard pipelineData={filteredPipelineData} tipo={isVendedor ? "closer" : "sdr"} referenciaId={(isVendedor ? profile?.closer_id : profile?.sdr_id) || ""} referenciaNome={userReferenciaNome} dateRange={dateRange} /> : <DashboardContent pipelineData={filteredPipelineData} closersList={closersList} sdrsList={sdrsList} dateRange={dateRange} isLoading={isLoading} times={allTimes} closers={filteredClosers} sdrs={filteredSdrs} />}
+          </TabsContent>
+
+          <TabsContent value="radar-conversao" className="space-y-4">
+            <Button 
+              variant="outline" 
+              onClick={() => setActiveTab("dashboard")}
+              className="gap-2"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Voltar para o Menu Principal
+            </Button>
+            <div className="w-full h-[calc(100vh-200px)] rounded-lg overflow-hidden border border-border">
+              <iframe
+                src="https://radar-cxcodigodaconversao-vendas.netlify.app/"
+                className="w-full h-full"
+                title="Radar da Conversão"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              />
+            </div>
           </TabsContent>
 
           {canSeePipeline && <TabsContent value="pipeline" className="space-y-6">
