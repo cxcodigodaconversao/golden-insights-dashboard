@@ -74,12 +74,12 @@ export function usePermissions(): UsePermissionsReturn {
 
   // Permissões para Clientes
   const clientesPermissions: PermissionConfig = {
-    canView: isAdmin || isLider || isCliente,
-    canEdit: isAdmin,
+    canView: isAdmin || isLider || isCliente || isVendedor || isSdr,
+    canEdit: isAdmin || isLider,
     canDelete: isAdmin,
     canTransfer: false,
-    canExport: isAdmin,
-    canCreate: isAdmin,
+    canExport: isAdmin || isLider,
+    canCreate: isAdmin || isLider || isVendedor || isSdr,
   };
 
   // Permissões para Times
