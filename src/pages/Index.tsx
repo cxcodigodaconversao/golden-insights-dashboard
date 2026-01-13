@@ -19,7 +19,7 @@ import { GestaoNotificacoes } from "@/components/Dashboard/GestaoNotificacoes";
 import { ResumoMetas } from "@/components/Dashboard/ResumoMetas";
 import { ComissoesView } from "@/components/Dashboard/ComissoesView";
 
-import { ResumoSemanal } from "@/components/Dashboard/ResumoSemanal";
+
 import { ImportExcel } from "@/components/Dashboard/ImportExcel";
 import { ExportExcel } from "@/components/Dashboard/ExportExcel";
 import { LixeiraLeads } from "@/components/Dashboard/LixeiraLeads";
@@ -29,7 +29,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useDeletedLeadsCount } from "@/hooks/useLeads";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { LayoutDashboard, Users, Headphones, Globe, Calendar, Shield, Crown, UserCog, Target, Bell, BarChart3, DollarSign, Building2, Trash2, Columns3, Radar, ArrowLeft } from "lucide-react";
+import { LayoutDashboard, Users, Headphones, Globe, Shield, Crown, UserCog, Target, Bell, BarChart3, DollarSign, Building2, Trash2, Columns3, Radar, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { startOfMonth, endOfMonth, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -212,7 +212,6 @@ const Index = () => {
   // - Líder: dashboard, resumo, lançamentos, metas (da equipe)
   // - Vendedor/SDR: apenas dashboard e resumo metas (próprios resultados)
   const canSeeDashboard = true;
-  const canSeeResumo = isAdmin || isLider;
   
   const canSeeMetas = isAdmin;
   const canSeeResumoMetas = !isCliente;
@@ -255,10 +254,6 @@ const Index = () => {
                   <Columns3 className="h-4 w-4" />
                   <span className="hidden sm:inline">Cadastro de Leads
               </span>
-                </TabsTrigger>}
-              {canSeeResumo && <TabsTrigger value="resumo" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2">
-                  <Calendar className="h-4 w-4" />
-                  <span className="hidden sm:inline">Resumo</span>
                 </TabsTrigger>}
               {canSeeGestao && <>
                   <TabsTrigger value="times" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2">
@@ -373,13 +368,6 @@ const Index = () => {
               <CadastroLeadsPage />
             </TabsContent>}
 
-          {canSeeResumo && <TabsContent value="resumo" className="space-y-6">
-              <div className="opacity-0 animate-fade-in">
-                <h2 className="font-display text-2xl sm:text-3xl font-bold text-foreground">Resumo Semanal</h2>
-                <p className="text-sm text-muted-foreground">Visão consolidada por período</p>
-              </div>
-              <ResumoSemanal />
-            </TabsContent>}
 
 
 
