@@ -37,6 +37,13 @@ export interface ClientePipeline {
   status: string | null;
   info_sdr: string | null;
   gravacao: string | null;
+  // Campos de fechamento de venda
+  valor_venda: number | null;
+  valor_pendente: number | null;
+  tipo_negociacao: string | null;
+  forma_pagamento: string | null;
+  pagamento_confirmado: boolean | null;
+  data_pagamento_confirmado: string | null;
 }
 
 export interface HistoricoPipeline {
@@ -86,8 +93,15 @@ export const ETAPAS_PIPELINE = [
   { id: "proposta_enviada", nome: "Proposta Enviada", cor: "#F59E0B" },
   { id: "em_negociacao", nome: "Em Negociação", cor: "#F97316" },
   { id: "fechamento_pendente", nome: "Fechamento Pendente", cor: "#8B5CF6" },
+  { id: "aplicacao", nome: "Aplicação", cor: "#EC4899" },
   { id: "ganho", nome: "Ganho", cor: "#22C55E" },
   { id: "perdido", nome: "Perdido", cor: "#EF4444" },
+] as const;
+
+export const TIPOS_NEGOCIACAO = [
+  { id: "recorrencia", nome: "Recorrência" },
+  { id: "pix_avista", nome: "Pix à vista" },
+  { id: "cartao_cheio", nome: "Cartão cheio" },
 ] as const;
 
 export const STATUS_ATENDIMENTO = [

@@ -9,6 +9,7 @@ import { ConversionFunnel } from "@/components/Dashboard/ConversionFunnel";
 import { PeriodComparison } from "@/components/Dashboard/PeriodComparison";
 import { AtendimentosTable } from "@/components/Dashboard/AtendimentosTable";
 import { VendasPorOrigem } from "@/components/Dashboard/VendasPorOrigem";
+import { TipoNegociacaoChart } from "@/components/Dashboard/TipoNegociacaoChart";
 import { ClientePipeline } from "@/hooks/usePipeline";
 import { calcularMetricasPipeline, calcularRankingClosersPipeline } from "@/hooks/usePipelineForDashboard";
 import { DollarSign, Users, TrendingUp, Target, Phone, Loader2 } from "lucide-react";
@@ -203,14 +204,15 @@ export function DashboardContent({
         </div>
       </div>
 
-      {/* Vendas por Origem */}
-      <div className="mb-8">
+      {/* Vendas por Origem e Tipo de Negociação */}
+      <div className="mb-8 grid gap-6 lg:grid-cols-2">
         <div className="rounded-xl border border-border bg-card p-6 card-shadow opacity-0 animate-fade-in stagger-5">
           <h3 className="mb-4 font-display text-lg font-semibold text-foreground">
             📊 Vendas por Origem
           </h3>
           <VendasPorOrigem data={filteredData} />
         </div>
+        <TipoNegociacaoChart data={pipelineData} />
       </div>
 
       {/* Funil e Comparativo */}

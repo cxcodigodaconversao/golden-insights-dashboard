@@ -3,29 +3,37 @@ import { DragDropContext, DropResult } from "@hello-pangea/dnd";
 import { KanbanColumn } from "./KanbanColumn";
 import { LeadsFilters } from "./LeadsFilters";
 import { ClienteDetailModal } from "./ClienteDetailModal";
+import { FechamentoVendaModal } from "./FechamentoVendaModal";
 import {
   ClientePipeline,
   ETAPAS_PIPELINE,
   useClientesPipeline,
   useMoveClienteEtapa,
+  useUpdateClientePipeline,
 } from "@/hooks/usePipeline";
 import { useAuth } from "@/hooks/useAuth";
 import { Skeleton } from "@/components/ui/skeleton";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface KanbanBoardProps {
   strs: { id: string; nome: string }[];
 }
 
 export function KanbanBoard({ strs }: KanbanBoardProps) {
-  const { isAdmin, isLider, isVendedor, isSdr, profile } = useAuth();
+  const { isAdmin, isLider, isVendedor, isSdr, profile, user } = useAuth();
   const { data: clientes = [], isLoading } = useClientesPipeline();
   const moveCliente = useMoveClienteEtapa();
+  const updateCliente = useUpdateClientePipeline();
 
   const [search, setSearch] = useState("");
   const [temperatura, setTemperatura] = useState<string | null>(null);
   const [strResponsavel, setStrResponsavel] = useState<string | null>(null);
   const [selectedCliente, setSelectedCliente] = useState<ClientePipeline | null>(null);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
+  const [fechamentoModalOpen, setFechamentoModalOpen] = useState(false);
+  const [clienteParaFechamento, setClienteParaFechamento] = useState<ClientePipeline | null>(null);
+  const [pendingMove, setPendingMove] = useState<{ id: string; etapaAnterior: string } | null>(null);
 
   // Filtrar clientes
   const filteredClientes = useMemo(() => {
@@ -73,9 +81,9 @@ export function KanbanBoard({ strs }: KanbanBoardProps) {
       return ETAPAS_PIPELINE;
     }
     if (isVendedor) {
-      // Closer vê apenas etapas avançadas
+      // Closer vê apenas etapas avançadas incluindo aplicação
       return ETAPAS_PIPELINE.filter((e) =>
-        ["proposta_enviada", "em_negociacao", "fechamento_pendente", "ganho", "perdido"].includes(e.id)
+        ["proposta_enviada", "em_negociacao", "fechamento_pendente", "aplicacao", "ganho", "perdido"].includes(e.id)
       );
     }
     if (isSdr) {
@@ -105,9 +113,20 @@ export function KanbanBoard({ strs }: KanbanBoardProps) {
       return;
     }
 
-    // Closer só pode mover para ganho ou perdido
-    if (isVendedor && !["ganho", "perdido", "proposta_enviada", "em_negociacao", "fechamento_pendente"].includes(etapaDestino)) {
+    // Closer só pode mover para etapas permitidas incluindo aplicação
+    if (isVendedor && !["ganho", "perdido", "proposta_enviada", "em_negociacao", "fechamento_pendente", "aplicacao"].includes(etapaDestino)) {
       return;
+    }
+
+    // Se estiver movendo para "aplicacao", abrir modal de fechamento
+    if (etapaDestino === "aplicacao") {
+      const clienteMovido = clientes.find(c => c.id === draggableId);
+      if (clienteMovido) {
+        setClienteParaFechamento(clienteMovido);
+        setPendingMove({ id: draggableId, etapaAnterior: etapaOrigem });
+        setFechamentoModalOpen(true);
+        return;
+      }
     }
 
     moveCliente.mutate({
@@ -115,6 +134,52 @@ export function KanbanBoard({ strs }: KanbanBoardProps) {
       etapaAnterior: etapaOrigem,
       etapaNova: etapaDestino,
     });
+  };
+
+  const handleFechamentoConfirm = async (data: {
+    valor_venda: number;
+    valor_pendente: number;
+    tipo_negociacao: string;
+    forma_pagamento: string;
+  }) => {
+    if (!pendingMove || !clienteParaFechamento || !user || !profile) return;
+
+    try {
+      // Atualizar cliente com dados de fechamento e mover para aplicação
+      await supabase
+        .from("clientes_pipeline")
+        .update({
+          valor_venda: data.valor_venda,
+          valor_pendente: data.valor_pendente,
+          tipo_negociacao: data.tipo_negociacao,
+          forma_pagamento: data.forma_pagamento,
+          etapa_atual: "aplicacao",
+          etapa_atualizada_em: new Date().toISOString(),
+        })
+        .eq("id", pendingMove.id);
+
+      // Registrar no histórico
+      await supabase.from("historico_pipeline").insert({
+        cliente_id: pendingMove.id,
+        etapa_anterior: pendingMove.etapaAnterior,
+        etapa_nova: "aplicacao",
+        usuario_id: user.id,
+        usuario_nome: profile.nome,
+        tipo: "mudanca_etapa",
+        nota: `Fechamento de venda - ${data.tipo_negociacao} - R$ ${data.valor_venda.toFixed(2)}`,
+      });
+
+      toast.success("Venda registrada! Cliente movido para Aplicação.");
+      setFechamentoModalOpen(false);
+      setClienteParaFechamento(null);
+      setPendingMove(null);
+
+      // Invalidar queries
+      window.location.reload();
+    } catch (error) {
+      console.error("Erro ao registrar fechamento:", error);
+      toast.error("Erro ao registrar fechamento");
+    }
   };
 
   const handleCardClick = (cliente: ClientePipeline) => {
@@ -181,6 +246,19 @@ export function KanbanBoard({ strs }: KanbanBoardProps) {
         cliente={selectedCliente}
         open={detailModalOpen}
         onOpenChange={setDetailModalOpen}
+      />
+
+      <FechamentoVendaModal
+        cliente={clienteParaFechamento}
+        open={fechamentoModalOpen}
+        onOpenChange={(open) => {
+          setFechamentoModalOpen(open);
+          if (!open) {
+            setClienteParaFechamento(null);
+            setPendingMove(null);
+          }
+        }}
+        onConfirm={handleFechamentoConfirm}
       />
     </div>
   );

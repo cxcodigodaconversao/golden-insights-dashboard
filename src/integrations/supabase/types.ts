@@ -218,11 +218,13 @@ export type Database = {
           closer_responsavel_nome: string | null
           created_at: string | null
           data_call: string | null
+          data_pagamento_confirmado: string | null
           data_proximo_contato: string | null
           email: string | null
           empresa: string | null
           etapa_atual: string
           etapa_atualizada_em: string | null
+          forma_pagamento: string | null
           gravacao: string | null
           hora_call: string | null
           id: string
@@ -232,6 +234,7 @@ export type Database = {
           origem_id: string | null
           origem_lead: string | null
           origem_nome: string | null
+          pagamento_confirmado: boolean | null
           proximo_passo: string | null
           sdr_id: string | null
           sdr_nome: string | null
@@ -240,8 +243,11 @@ export type Database = {
           str_responsavel_id: string
           str_responsavel_nome: string
           temperatura: string | null
+          tipo_negociacao: string | null
           updated_at: string | null
+          valor_pendente: number | null
           valor_potencial: number | null
+          valor_venda: number | null
           whatsapp: string
         }
         Insert: {
@@ -252,11 +258,13 @@ export type Database = {
           closer_responsavel_nome?: string | null
           created_at?: string | null
           data_call?: string | null
+          data_pagamento_confirmado?: string | null
           data_proximo_contato?: string | null
           email?: string | null
           empresa?: string | null
           etapa_atual?: string
           etapa_atualizada_em?: string | null
+          forma_pagamento?: string | null
           gravacao?: string | null
           hora_call?: string | null
           id?: string
@@ -266,6 +274,7 @@ export type Database = {
           origem_id?: string | null
           origem_lead?: string | null
           origem_nome?: string | null
+          pagamento_confirmado?: boolean | null
           proximo_passo?: string | null
           sdr_id?: string | null
           sdr_nome?: string | null
@@ -274,8 +283,11 @@ export type Database = {
           str_responsavel_id: string
           str_responsavel_nome: string
           temperatura?: string | null
+          tipo_negociacao?: string | null
           updated_at?: string | null
+          valor_pendente?: number | null
           valor_potencial?: number | null
+          valor_venda?: number | null
           whatsapp: string
         }
         Update: {
@@ -286,11 +298,13 @@ export type Database = {
           closer_responsavel_nome?: string | null
           created_at?: string | null
           data_call?: string | null
+          data_pagamento_confirmado?: string | null
           data_proximo_contato?: string | null
           email?: string | null
           empresa?: string | null
           etapa_atual?: string
           etapa_atualizada_em?: string | null
+          forma_pagamento?: string | null
           gravacao?: string | null
           hora_call?: string | null
           id?: string
@@ -300,6 +314,7 @@ export type Database = {
           origem_id?: string | null
           origem_lead?: string | null
           origem_nome?: string | null
+          pagamento_confirmado?: boolean | null
           proximo_passo?: string | null
           sdr_id?: string | null
           sdr_nome?: string | null
@@ -308,8 +323,11 @@ export type Database = {
           str_responsavel_id?: string
           str_responsavel_nome?: string
           temperatura?: string | null
+          tipo_negociacao?: string | null
           updated_at?: string | null
+          valor_pendente?: number | null
           valor_potencial?: number | null
+          valor_venda?: number | null
           whatsapp?: string
         }
         Relationships: [

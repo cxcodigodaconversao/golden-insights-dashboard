@@ -55,6 +55,7 @@ const Index = () => {
   const [selectedSdr, setSelectedSdr] = useState<string | null>(null);
   const [selectedCliente, setSelectedCliente] = useState<string | null>(null);
   const [selectedOrigem, setSelectedOrigem] = useState<string | null>(null);
+  const [selectedTipoNegociacao, setSelectedTipoNegociacao] = useState<string | null>(null);
   const {
     data: pipelineData = [],
     isLoading: isLoadingPipeline
@@ -184,6 +185,11 @@ const Index = () => {
       if (origemNome) {
         filtered = filtered.filter(a => a.origem_nome === origemNome || a.origem_lead === origemNome);
       }
+    }
+
+    // Filter by tipo de negociação
+    if (selectedTipoNegociacao) {
+      filtered = filtered.filter(a => a.tipo_negociacao === selectedTipoNegociacao);
     }
 
     // For vendedor: only their own closes
