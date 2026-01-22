@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Atendimento, statusColors, useClosers, useOrigens, useSdrs } from "@/hooks/useAtendimentos";
+import { TIPOS_NEGOCIACAO } from "@/hooks/usePipeline";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -199,6 +200,10 @@ export function AtendimentosTable({ data }: AtendimentosTableProps) {
           data_call: editingItem.dataCall.toISOString(),
           info_sdr: editingItem.info_sdr || null,
           gravacao: editingItem.gravacao || null,
+          tipo_negociacao: (editingItem as any).tipo_negociacao || null,
+          valor_venda: editingItem.valor || null,
+          valor_pendente: (editingItem as any).valor_pendente || null,
+          forma_pagamento: (editingItem as any).forma_pagamento || null,
           updated_at: new Date().toISOString(),
         })
         .eq("id", editingItem.id);
@@ -584,7 +589,7 @@ export function AtendimentosTable({ data }: AtendimentosTableProps) {
                     className="bg-secondary border-border"
                   />
                 </div>
-                <div className="space-y-2">
+              <div className="space-y-2">
                   <Label className="text-foreground">Link da Gravação</Label>
                   <Input
                     value={editingItem.gravacao || ""}
@@ -592,6 +597,42 @@ export function AtendimentosTable({ data }: AtendimentosTableProps) {
                     className="bg-secondary border-border"
                   />
                 </div>
+                <div className="space-y-2">
+                  <Label className="text-foreground">Tipo de Negociação</Label>
+                  <Select
+                    value={(editingItem as any).tipo_negociacao || ""}
+                    onValueChange={(value) => setEditingItem({ ...editingItem, tipo_negociacao: value } as any)}
+                  >
+                    <SelectTrigger className="bg-secondary border-border">
+                      <SelectValue placeholder="Selecione o tipo" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-card border-border">
+                      {TIPOS_NEGOCIACAO.map((tipo) => (
+                        <SelectItem key={tipo.id} value={tipo.id}>{tipo.nome}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-foreground">Valor Pendente (R$)</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={(editingItem as any).valor_pendente || ""}
+                    onChange={(e) => setEditingItem({ ...editingItem, valor_pendente: e.target.value ? parseFloat(e.target.value) : null } as any)}
+                    className="bg-secondary border-border"
+                    placeholder="0,00"
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-foreground">Forma de Pagamento</Label>
+                <Textarea
+                  value={(editingItem as any).forma_pagamento || ""}
+                  onChange={(e) => setEditingItem({ ...editingItem, forma_pagamento: e.target.value } as any)}
+                  className="bg-secondary border-border"
+                  placeholder="Descreva os detalhes do acordo de pagamento..."
+                />
               </div>
               <div className="space-y-2">
                 <Label className="text-foreground">Informações do SDR</Label>
