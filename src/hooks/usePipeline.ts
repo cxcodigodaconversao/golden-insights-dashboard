@@ -210,9 +210,31 @@ export function useUpdateClientePipeline() {
     }) => {
       if (!user || !profile) throw new Error("Usuário não autenticado");
 
+      // Sincronizar status e etapa automaticamente
+      const syncedData = { ...data };
+      
+      // Se status mudou para Venda Confirmada, etapa deve ser ganho
+      if (syncedData.status === "Venda Confirmada" && syncedData.etapa_atual !== "ganho") {
+        syncedData.etapa_atual = "ganho";
+        syncedData.etapa_atualizada_em = new Date().toISOString();
+      }
+      // Se status mudou para Não fechou, etapa deve ser perdido
+      if (syncedData.status === "Não fechou" && syncedData.etapa_atual !== "perdido") {
+        syncedData.etapa_atual = "perdido";
+        syncedData.etapa_atualizada_em = new Date().toISOString();
+      }
+      // Se etapa mudou para ganho, status deve ser Venda Confirmada
+      if (syncedData.etapa_atual === "ganho" && syncedData.status !== "Venda Confirmada") {
+        syncedData.status = "Venda Confirmada";
+      }
+      // Se etapa mudou para perdido, status deve ser Não fechou
+      if (syncedData.etapa_atual === "perdido" && syncedData.status !== "Não fechou") {
+        syncedData.status = "Não fechou";
+      }
+
       const { data: result, error } = await supabase
         .from("clientes_pipeline")
-        .update(data)
+        .update(syncedData)
         .eq("id", id)
         .select()
         .single();

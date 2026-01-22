@@ -252,7 +252,9 @@ export function CadastroClienteForm({ onSuccess }: CadastroClienteFormProps) {
         status: data.status || undefined,
         segmento: data.segmento || undefined,
         origem_lead: data.origem_lead || undefined,
-        etapa_atual: data.etapa_atual,
+        // Sincronizar etapa com status
+        etapa_atual: data.status === "Venda Confirmada" ? "ganho" : 
+                     data.status === "Não fechou" ? "perdido" : data.etapa_atual,
         temperatura: data.temperatura,
         valor_potencial: data.valor_potencial || undefined,
         proximo_passo: data.proximo_passo || undefined,
