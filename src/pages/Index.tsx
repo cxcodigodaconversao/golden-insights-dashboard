@@ -26,6 +26,7 @@ import { ExportExcel } from "@/components/Dashboard/ExportExcel";
 import { LixeiraLeads } from "@/components/Dashboard/LixeiraLeads";
 import { CadastroLeadsPage } from "@/components/Pipeline/CadastroLeadsPage";
 import { useAtendimentos, useClosers, useSdrs, useOrigens, useTimes, useLideres } from "@/hooks/useAtendimentos";
+import { useClientes } from "@/hooks/useClientes";
 import { useAuth } from "@/hooks/useAuth";
 import { useDeletedLeadsCount } from "@/hooks/useLeads";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -52,6 +53,8 @@ const Index = () => {
   const [selectedTeam, setSelectedTeam] = useState<string | null>(null);
   const [selectedCloser, setSelectedCloser] = useState<string | null>(null);
   const [selectedSdr, setSelectedSdr] = useState<string | null>(null);
+  const [selectedCliente, setSelectedCliente] = useState<string | null>(null);
+  const [selectedOrigem, setSelectedOrigem] = useState<string | null>(null);
   const {
     data: pipelineData = [],
     isLoading: isLoadingPipeline
@@ -91,6 +94,9 @@ const Index = () => {
   const {
     data: allLideres = []
   } = useLideres(true);
+  const {
+    data: allClientes = []
+  } = useClientes();
 
   // Count of deleted leads for trash badge
   const {
@@ -167,6 +173,19 @@ const Index = () => {
       }
     }
 
+    // Filter by cliente
+    if (selectedCliente) {
+      filtered = filtered.filter(a => a.cliente_id === selectedCliente);
+    }
+
+    // Filter by origem
+    if (selectedOrigem) {
+      const origemNome = allOrigens.find(o => o.id === selectedOrigem)?.nome;
+      if (origemNome) {
+        filtered = filtered.filter(a => a.origem_nome === origemNome || a.origem_lead === origemNome);
+      }
+    }
+
     // For vendedor: only their own closes
     if (isVendedor && profile?.closer_id) {
       const myCloser = allClosers.find(c => c.id === profile.closer_id);
@@ -183,7 +202,7 @@ const Index = () => {
       }
     }
     return filtered;
-  }, [pipelineData, effectiveTeamFilter, selectedCloser, selectedSdr, isVendedor, isSdr, profile, allClosers, allSdrs]);
+  }, [pipelineData, effectiveTeamFilter, selectedCloser, selectedSdr, selectedCliente, selectedOrigem, isVendedor, isSdr, profile, allClosers, allSdrs, allOrigens]);
   const closersList = useMemo(() => {
     if (isVendedor && profile?.closer_id) {
       const myCloser = allClosers.find(c => c.id === profile.closer_id);
@@ -339,7 +358,7 @@ const Index = () => {
                 </p>
               </div>
               <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-                {(isAdmin || isLider) && <AdvancedFilters times={allTimes} closers={allClosers} sdrs={allSdrs} selectedTeam={selectedTeam} selectedCloser={selectedCloser} selectedSdr={selectedSdr} onTeamChange={setSelectedTeam} onCloserChange={setSelectedCloser} onSdrChange={setSelectedSdr} />}
+                {(isAdmin || isLider) && <AdvancedFilters times={allTimes} closers={allClosers} sdrs={allSdrs} clientes={allClientes} origens={allOrigens} selectedTeam={selectedTeam} selectedCloser={selectedCloser} selectedSdr={selectedSdr} selectedCliente={selectedCliente} selectedOrigem={selectedOrigem} onTeamChange={setSelectedTeam} onCloserChange={setSelectedCloser} onSdrChange={setSelectedSdr} onClienteChange={setSelectedCliente} onOrigemChange={setSelectedOrigem} />}
                 <PeriodFilter onPeriodChange={handlePeriodChange} currentPeriod={periodType} />
               </div>
             </div>
