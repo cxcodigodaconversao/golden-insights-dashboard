@@ -13,14 +13,14 @@ interface VendasPorOrigemProps {
 }
 
 const COLORS = [
-  "hsl(var(--primary))",
-  "hsl(var(--chart-2))",
-  "hsl(var(--chart-3))",
-  "hsl(var(--chart-4))",
-  "hsl(var(--chart-5))",
-  "#8884d8",
-  "#82ca9d",
-  "#ffc658",
+  "#C9A86C",  // Dourado
+  "#3B82F6",  // Azul
+  "#22C55E",  // Verde
+  "#F59E0B",  // Laranja
+  "#8B5CF6",  // Roxo
+  "#EC4899",  // Rosa
+  "#14B8A6",  // Turquesa
+  "#EF4444",  // Vermelho
 ];
 
 export function VendasPorOrigem({ data }: VendasPorOrigemProps) {
@@ -66,28 +66,31 @@ export function VendasPorOrigem({ data }: VendasPorOrigemProps) {
   }
 
   return (
-    <ResponsiveContainer width="100%" height={300}>
-      <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-        <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+    <ResponsiveContainer width="100%" height={320}>
+      <BarChart data={chartData} margin={{ top: 20, right: 40, left: 20, bottom: 70 }}>
+        <CartesianGrid strokeDasharray="3 3" className="stroke-border" opacity={0.3} />
         <XAxis 
           dataKey="name" 
-          tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }}
+          tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
           tickLine={{ stroke: "hsl(var(--border))" }}
-          angle={-45}
+          angle={-35}
           textAnchor="end"
-          height={80}
+          height={70}
+          interval={0}
         />
         <YAxis 
           yAxisId="left"
-          tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }}
+          tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
           tickLine={{ stroke: "hsl(var(--border))" }}
           tickFormatter={formatCurrency}
+          width={70}
         />
         <YAxis 
           yAxisId="right"
           orientation="right"
-          tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }}
+          tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
           tickLine={{ stroke: "hsl(var(--border))" }}
+          width={40}
         />
         <Tooltip 
           contentStyle={{ 
@@ -101,7 +104,10 @@ export function VendasPorOrigem({ data }: VendasPorOrigemProps) {
             return [value, "Vendas"];
           }}
         />
-        <Legend />
+        <Legend 
+          wrapperStyle={{ paddingTop: "10px" }}
+          formatter={(value) => <span className="text-xs md:text-sm">{value}</span>}
+        />
         <Bar 
           yAxisId="left"
           dataKey="receita" 
@@ -116,7 +122,7 @@ export function VendasPorOrigem({ data }: VendasPorOrigemProps) {
           yAxisId="right"
           dataKey="vendas" 
           name="Qtd. Vendas" 
-          fill="hsl(var(--chart-2))"
+          fill="#64748B"
           radius={[4, 4, 0, 0]}
         />
       </BarChart>
