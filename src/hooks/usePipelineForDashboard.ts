@@ -49,6 +49,12 @@ export function usePipelineForDashboard() {
         observacoes: item.observacoes,
         proximo_passo: item.proximo_passo,
         data_proximo_contato: item.data_proximo_contato,
+        tipo_negociacao: item.tipo_negociacao,
+        valor_venda: item.valor_venda,
+        valor_pendente: item.valor_pendente,
+        forma_pagamento: item.forma_pagamento,
+        pagamento_confirmado: item.pagamento_confirmado,
+        data_pagamento_confirmado: item.data_pagamento_confirmado,
       })) as ClientePipeline[];
     },
   });
