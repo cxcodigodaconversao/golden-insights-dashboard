@@ -104,7 +104,7 @@ export const calcularMetricasPipeline = (
     compareceram,
     naoCompareceram,
     taxaComparecimento: filtered.length > 0 ? (compareceram / filtered.length) * 100 : 0,
-    taxaConversao: compareceram > 0 ? (vendas.length / compareceram) * 100 : 0,
+    taxaConversao: filtered.length > 0 ? (vendas.length / filtered.length) * 100 : 0,
     ticketMedio: vendas.length > 0 ? receita / vendas.length : 0,
   };
 };

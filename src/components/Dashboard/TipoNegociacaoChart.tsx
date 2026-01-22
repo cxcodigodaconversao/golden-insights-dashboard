@@ -19,7 +19,7 @@ interface TipoNegociacaoChartProps {
   }>;
 }
 
-const COLORS = ["#8B5CF6", "#22C55E", "#3B82F6", "#F59E0B"];
+const COLORS = ["#C9A86C", "#3B82F6", "#22C55E", "#F59E0B", "#8B5CF6"];
 
 export function TipoNegociacaoChart({ data }: TipoNegociacaoChartProps) {
   const chartData = useMemo(() => {
@@ -89,21 +89,39 @@ export function TipoNegociacaoChart({ data }: TipoNegociacaoChartProps) {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="h-[250px]">
+        <div className="h-[320px] md:h-[300px]">
           <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
+            <PieChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
               <Pie
                 data={chartData}
                 cx="50%"
-                cy="50%"
-                innerRadius={50}
-                outerRadius={80}
-                paddingAngle={5}
+                cy="42%"
+                innerRadius={35}
+                outerRadius={60}
+                paddingAngle={4}
                 dataKey="quantidade"
-                label={({ name, percent }) =>
-                  `${name} (${(percent * 100).toFixed(0)}%)`
-                }
-                labelLine={{ strokeWidth: 1 }}
+                label={({ name, percent, cx, cy, midAngle, outerRadius }) => {
+                  const RADIAN = Math.PI / 180;
+                  const radius = outerRadius + 25;
+                  const x = cx + radius * Math.cos(-midAngle * RADIAN);
+                  const y = cy + radius * Math.sin(-midAngle * RADIAN);
+                  return (
+                    <text
+                      x={x}
+                      y={y}
+                      fill="hsl(var(--foreground))"
+                      textAnchor={x > cx ? "start" : "end"}
+                      dominantBaseline="central"
+                      className="text-[10px] md:text-xs"
+                    >
+                      {`${name} (${(percent * 100).toFixed(0)}%)`}
+                    </text>
+                  );
+                }}
+                labelLine={{ 
+                  strokeWidth: 1, 
+                  stroke: "hsl(var(--muted-foreground))",
+                }}
               >
                 {chartData.map((_, index) => (
                   <Cell
@@ -133,15 +151,16 @@ export function TipoNegociacaoChart({ data }: TipoNegociacaoChartProps) {
               />
               <Legend
                 verticalAlign="bottom"
-                height={36}
+                height={40}
+                wrapperStyle={{ paddingTop: "5px" }}
                 formatter={(value) => (
-                  <span className="text-sm text-foreground">{value}</span>
+                  <span className="text-xs md:text-sm text-foreground">{value}</span>
                 )}
               />
             </PieChart>
           </ResponsiveContainer>
         </div>
-        <div className="mt-2 text-center text-sm text-muted-foreground">
+        <div className="text-center text-sm text-muted-foreground">
           Total: {total} vendas
         </div>
       </CardContent>
