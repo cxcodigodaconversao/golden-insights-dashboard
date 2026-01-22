@@ -29,9 +29,8 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { UserPlus, ChevronDown, ChevronUp, Loader2, CalendarIcon, AlertCircle, CheckCircle2, Calendar as CalendarCheck } from "lucide-react";
 import {
   useCreateClientePipeline,
-  STATUS_ATENDIMENTO,
 } from "@/hooks/usePipeline";
-import { useSegmentos } from "@/hooks/useSegmentos";
+import { useStatusAtendimento } from "@/hooks/useStatusAtendimento";
 import { useClosers, useSdrs, useOrigens, useTimes } from "@/hooks/useAtendimentos";
 import { useClientes } from "@/hooks/useClientes";
 import { useCheckCloserAvailability, useCreateCloserCalendarEvent } from "@/hooks/useCloserGoogleCalendar";
@@ -63,7 +62,6 @@ const formSchema = z.object({
   status: z.string().default("Em negociação"),
   
   // Dados da Negociação
-  segmento: z.string().optional(),
   origem_lead: z.string().optional(),
   etapa_atual: z.string().default("primeiro_contato"),
   temperatura: z.string().default("morno"),
@@ -107,7 +105,9 @@ export function CadastroClienteForm({ onSuccess }: CadastroClienteFormProps) {
   const checkAvailability = useCheckCloserAvailability();
   const createCalendarEvent = useCreateCloserCalendarEvent();
   
-  const { data: segmentos = [] } = useSegmentos();
+  const { data: statusList = [] } = useStatusAtendimento();
+  
+  
   const { data: closers = [] } = useClosers();
   const { data: sdrs = [] } = useSdrs();
   const { data: origens = [] } = useOrigens();
@@ -132,7 +132,6 @@ export function CadastroClienteForm({ onSuccess }: CadastroClienteFormProps) {
       origem_id: "",
       origem_nome: "",
       status: "Em negociação",
-      segmento: "",
       origem_lead: "",
       etapa_atual: "primeiro_contato",
       temperatura: "morno",
@@ -250,11 +249,13 @@ export function CadastroClienteForm({ onSuccess }: CadastroClienteFormProps) {
         origem_id: data.origem_id || undefined,
         origem_nome: origemSelecionada?.nome || undefined,
         status: data.status || undefined,
-        segmento: data.segmento || undefined,
         origem_lead: data.origem_lead || undefined,
-        // Sincronizar etapa com status
-        etapa_atual: data.status === "Venda Confirmada" ? "ganho" : 
-                     data.status === "Não fechou" ? "perdido" : data.etapa_atual,
+        // Sincronizar etapa com status usando dados do banco
+        etapa_atual: (() => {
+          const statusConfig = statusList.find(s => s.nome === data.status);
+          if (statusConfig?.sincroniza_etapa) return statusConfig.sincroniza_etapa;
+          return data.etapa_atual;
+        })(),
         temperatura: data.temperatura,
         valor_potencial: data.valor_potencial || undefined,
         proximo_passo: data.proximo_passo || undefined,
@@ -458,33 +459,6 @@ export function CadastroClienteForm({ onSuccess }: CadastroClienteFormProps) {
                       )}
                     />
 
-                    <FormField
-                      control={form.control}
-                      name="segmento"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Segmento</FormLabel>
-                          <Select
-                            onValueChange={field.onChange}
-                            value={field.value}
-                          >
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Selecione" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {segmentos.map((seg) => (
-                                <SelectItem key={seg.id} value={seg.nome}>
-                                  {seg.nome}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
                   </div>
                 </div>
 
@@ -666,9 +640,9 @@ export function CadastroClienteForm({ onSuccess }: CadastroClienteFormProps) {
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              {STATUS_ATENDIMENTO.map((status) => (
-                                <SelectItem key={status} value={status}>
-                                  {status}
+                              {statusList.map((status) => (
+                                <SelectItem key={status.id} value={status.nome}>
+                                  {status.nome}
                                 </SelectItem>
                               ))}
                             </SelectContent>

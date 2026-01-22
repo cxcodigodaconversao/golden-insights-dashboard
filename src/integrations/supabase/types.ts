@@ -1142,6 +1142,33 @@ export type Database = {
         }
         Relationships: []
       }
+      status_atendimento: {
+        Row: {
+          ativo: boolean | null
+          created_at: string | null
+          id: string
+          nome: string
+          ordem: number | null
+          sincroniza_etapa: string | null
+        }
+        Insert: {
+          ativo?: boolean | null
+          created_at?: string | null
+          id?: string
+          nome: string
+          ordem?: number | null
+          sincroniza_etapa?: string | null
+        }
+        Update: {
+          ativo?: boolean | null
+          created_at?: string | null
+          id?: string
+          nome?: string
+          ordem?: number | null
+          sincroniza_etapa?: string | null
+        }
+        Relationships: []
+      }
       times: {
         Row: {
           ativo: boolean

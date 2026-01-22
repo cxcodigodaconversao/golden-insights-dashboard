@@ -196,15 +196,7 @@ export function ClienteDetailModal({
               {cliente.empresa && (
                 <div className="flex items-center gap-2 p-2 rounded-lg bg-secondary/50 mt-3">
                   <Building2 className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm">
-                    {cliente.empresa}
-                    {cliente.segmento && (
-                      <span className="text-muted-foreground">
-                        {" "}
-                        • {cliente.segmento}
-                      </span>
-                    )}
-                  </span>
+                  <span className="text-sm">{cliente.empresa}</span>
                 </div>
               )}
 
