@@ -210,26 +210,29 @@ export function useUpdateClientePipeline() {
     }) => {
       if (!user || !profile) throw new Error("Usuário não autenticado");
 
-      // Sincronizar status e etapa automaticamente
+      // Buscar configuração de status para sincronização dinâmica
+      const { data: statusConfigs } = await supabase
+        .from("status_atendimento")
+        .select("nome, sincroniza_etapa")
+        .eq("ativo", true);
+
+      // Sincronizar status e etapa automaticamente usando configuração do banco
       const syncedData = { ...data };
       
-      // Se status mudou para Venda Confirmada, etapa deve ser ganho
-      if (syncedData.status === "Venda Confirmada" && syncedData.etapa_atual !== "ganho") {
-        syncedData.etapa_atual = "ganho";
-        syncedData.etapa_atualizada_em = new Date().toISOString();
+      if (syncedData.status && statusConfigs) {
+        const statusConfig = statusConfigs.find(s => s.nome === syncedData.status);
+        if (statusConfig?.sincroniza_etapa && syncedData.etapa_atual !== statusConfig.sincroniza_etapa) {
+          syncedData.etapa_atual = statusConfig.sincroniza_etapa;
+          syncedData.etapa_atualizada_em = new Date().toISOString();
+        }
       }
-      // Se status mudou para Não fechou, etapa deve ser perdido
-      if (syncedData.status === "Não fechou" && syncedData.etapa_atual !== "perdido") {
-        syncedData.etapa_atual = "perdido";
-        syncedData.etapa_atualizada_em = new Date().toISOString();
-      }
-      // Se etapa mudou para ganho, status deve ser Venda Confirmada
-      if (syncedData.etapa_atual === "ganho" && syncedData.status !== "Venda Confirmada") {
-        syncedData.status = "Venda Confirmada";
-      }
-      // Se etapa mudou para perdido, status deve ser Não fechou
-      if (syncedData.etapa_atual === "perdido" && syncedData.status !== "Não fechou") {
-        syncedData.status = "Não fechou";
+      
+      // Sincronização reversa: se etapa muda, encontrar status correspondente
+      if (syncedData.etapa_atual && statusConfigs) {
+        const matchingStatus = statusConfigs.find(s => s.sincroniza_etapa === syncedData.etapa_atual);
+        if (matchingStatus && syncedData.status !== matchingStatus.nome) {
+          syncedData.status = matchingStatus.nome;
+        }
       }
 
       const { data: result, error } = await supabase

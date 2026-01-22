@@ -18,6 +18,7 @@ import { GestaoMetas } from "@/components/Dashboard/GestaoMetas";
 import { GestaoNotificacoes } from "@/components/Dashboard/GestaoNotificacoes";
 import { ResumoMetas } from "@/components/Dashboard/ResumoMetas";
 import { ComissoesView } from "@/components/Dashboard/ComissoesView";
+import { GestaoStatus } from "@/components/Dashboard/GestaoStatus";
 
 
 import { ImportExcel } from "@/components/Dashboard/ImportExcel";
@@ -29,7 +30,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useDeletedLeadsCount } from "@/hooks/useLeads";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { LayoutDashboard, Users, Headphones, Globe, Shield, Crown, UserCog, Target, Bell, BarChart3, DollarSign, Building2, Trash2, Columns3, Radar, ArrowLeft } from "lucide-react";
+import { LayoutDashboard, Users, Headphones, Globe, Shield, Crown, UserCog, Target, Bell, BarChart3, DollarSign, Building2, Trash2, Columns3, Radar, ArrowLeft, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { startOfMonth, endOfMonth, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -221,6 +222,7 @@ const Index = () => {
   const canSeeUsuarios = isAdmin;
   const canSeeClientes = isAdmin;
   const canSeeLixeira = isAdmin;
+  const canSeeConfiguracoes = isAdmin;
   const canSeePipeline = isAdmin || isLider || isVendedor || isSdr;
 
   // Determine if user should see individual dashboard
@@ -300,6 +302,10 @@ const Index = () => {
               {canSeeUsuarios && <TabsTrigger value="usuarios" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2">
                   <UserCog className="h-4 w-4" />
                   <span className="hidden sm:inline">Usuários</span>
+                </TabsTrigger>}
+              {canSeeConfiguracoes && <TabsTrigger value="configuracoes" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2">
+                  <Settings className="h-4 w-4" />
+                  <span className="hidden sm:inline">Config.</span>
                 </TabsTrigger>}
               {canSeeLixeira && <TabsTrigger value="lixeira" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2 relative">
                   <Trash2 className="h-4 w-4" />
@@ -467,6 +473,14 @@ const Index = () => {
                 <p className="text-sm text-muted-foreground">Gerencie os usuários do sistema</p>
               </div>
               <GestaoUsuarios />
+            </TabsContent>}
+
+          {canSeeConfiguracoes && <TabsContent value="configuracoes" className="space-y-6">
+              <div className="opacity-0 animate-fade-in">
+                <h2 className="font-display text-2xl sm:text-3xl font-bold text-foreground">Configurações</h2>
+                <p className="text-sm text-muted-foreground">Gerencie os status de atendimento e outras configurações</p>
+              </div>
+              <GestaoStatus />
             </TabsContent>}
 
           {canSeeLixeira && <TabsContent value="lixeira" className="space-y-6">
