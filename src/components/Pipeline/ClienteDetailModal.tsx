@@ -25,11 +25,15 @@ import {
   Video,
   ExternalLink,
   Briefcase,
+  CreditCard,
+  CheckCircle,
+  Receipt,
 } from "lucide-react";
 import {
   ClientePipeline,
   ETAPAS_PIPELINE,
   TEMPERATURAS,
+  TIPOS_NEGOCIACAO,
   useHistoricoPipeline,
   useAddNotaPipeline,
   useUpdateClientePipeline,
@@ -37,6 +41,9 @@ import {
 import { format, parseISO, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { toast } from "sonner";
 
 interface ClienteDetailModalProps {
   cliente: ClientePipeline | null;
@@ -52,7 +59,9 @@ export function ClienteDetailModal({
   const [novaNota, setNovaNota] = useState("");
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState<Partial<ClientePipeline>>({});
+  const [isConfirmingPayment, setIsConfirmingPayment] = useState(false);
 
+  const { user, profile } = useAuth();
   const { data: historico = [], isLoading: isLoadingHistorico } =
     useHistoricoPipeline(cliente?.id || "");
   const addNota = useAddNotaPipeline();
@@ -62,10 +71,14 @@ export function ClienteDetailModal({
 
   const temperatura = TEMPERATURAS.find((t) => t.id === cliente.temperatura);
   const etapaAtual = ETAPAS_PIPELINE.find((e) => e.id === cliente.etapa_atual);
+  const tipoNegociacao = TIPOS_NEGOCIACAO.find((t) => t.id === cliente.tipo_negociacao);
 
   const diasNaEtapa = cliente.etapa_atualizada_em
     ? differenceInDays(new Date(), parseISO(cliente.etapa_atualizada_em))
     : 0;
+
+  const isEmAplicacao = cliente.etapa_atual === "aplicacao";
+  const pagamentoConfirmado = cliente.pagamento_confirmado;
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("pt-BR", {
@@ -106,6 +119,44 @@ export function ClienteDetailModal({
     );
   };
 
+  const handleConfirmPayment = async () => {
+    if (!user || !profile) return;
+
+    setIsConfirmingPayment(true);
+    try {
+      // Atualizar cliente para ganho e confirmar pagamento
+      await supabase
+        .from("clientes_pipeline")
+        .update({
+          pagamento_confirmado: true,
+          data_pagamento_confirmado: new Date().toISOString(),
+          etapa_atual: "ganho",
+          etapa_atualizada_em: new Date().toISOString(),
+        })
+        .eq("id", cliente.id);
+
+      // Registrar no histórico
+      await supabase.from("historico_pipeline").insert({
+        cliente_id: cliente.id,
+        etapa_anterior: "aplicacao",
+        etapa_nova: "ganho",
+        usuario_id: user.id,
+        usuario_nome: profile.nome,
+        tipo: "pagamento_confirmado",
+        nota: `Pagamento confirmado - ${tipoNegociacao?.nome || cliente.tipo_negociacao} - ${formatCurrency(cliente.valor_venda || 0)}`,
+      });
+
+      toast.success("Pagamento confirmado! Cliente movido para Ganho.");
+      onOpenChange(false);
+      window.location.reload();
+    } catch (error) {
+      console.error("Erro ao confirmar pagamento:", error);
+      toast.error("Erro ao confirmar pagamento");
+    } finally {
+      setIsConfirmingPayment(false);
+    }
+  };
+
   const getHistoricoIcon = (tipo: string) => {
     switch (tipo) {
       case "mudanca_etapa":
@@ -114,6 +165,8 @@ export function ClienteDetailModal({
         return <MessageSquare className="h-4 w-4" />;
       case "edicao":
         return <Edit2 className="h-4 w-4" />;
+      case "pagamento_confirmado":
+        return <CheckCircle className="h-4 w-4" />;
       default:
         return <Clock className="h-4 w-4" />;
     }
@@ -129,6 +182,8 @@ export function ClienteDetailModal({
         return "Edição";
       case "criacao":
         return "Criação";
+      case "pagamento_confirmado":
+        return "Pagamento Confirmado";
       default:
         return tipo;
     }
@@ -309,6 +364,89 @@ export function ClienteDetailModal({
                   </div>
                 )}
               </div>
+
+              {/* Dados de Pagamento - visível quando há dados de fechamento */}
+              {(cliente.valor_venda || cliente.tipo_negociacao || isEmAplicacao) && (
+                <div className="space-y-3 mt-6">
+                  <h4 className="font-semibold text-sm text-muted-foreground flex items-center gap-2">
+                    <CreditCard className="h-4 w-4" />
+                    Pagamento
+                    {pagamentoConfirmado && (
+                      <Badge variant="default" className="bg-green-500 ml-2">
+                        <CheckCircle className="h-3 w-3 mr-1" />
+                        Confirmado
+                      </Badge>
+                    )}
+                  </h4>
+                  <div className="grid grid-cols-2 gap-3">
+                    {cliente.valor_venda && cliente.valor_venda > 0 && (
+                      <div className="flex items-center gap-2 p-2 rounded-lg bg-green-500/10 border border-green-500/20">
+                        <DollarSign className="h-4 w-4 text-green-500" />
+                        <div>
+                          <p className="text-xs text-muted-foreground">Valor da Venda</p>
+                          <span className="text-sm font-semibold text-green-600">
+                            {formatCurrency(cliente.valor_venda)}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                    {cliente.valor_pendente !== null && cliente.valor_pendente > 0 && (
+                      <div className="flex items-center gap-2 p-2 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
+                        <Clock className="h-4 w-4 text-yellow-500" />
+                        <div>
+                          <p className="text-xs text-muted-foreground">Valor Pendente</p>
+                          <span className="text-sm font-semibold text-yellow-600">
+                            {formatCurrency(cliente.valor_pendente)}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  {tipoNegociacao && (
+                    <div className="flex items-center gap-2 p-2 rounded-lg bg-primary/10 border border-primary/20">
+                      <Receipt className="h-4 w-4 text-primary" />
+                      <div>
+                        <p className="text-xs text-muted-foreground">Tipo de Negociação</p>
+                        <span className="text-sm font-medium text-primary">
+                          {tipoNegociacao.nome}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                  {cliente.forma_pagamento && (
+                    <div className="p-2 rounded-lg bg-secondary/50">
+                      <p className="text-xs text-muted-foreground mb-1">
+                        Forma de Pagamento Negociada:
+                      </p>
+                      <p className="text-sm">{cliente.forma_pagamento}</p>
+                    </div>
+                  )}
+                  {cliente.data_pagamento_confirmado && (
+                    <div className="flex items-center gap-2 p-2 rounded-lg bg-green-500/10">
+                      <Calendar className="h-4 w-4 text-green-500" />
+                      <span className="text-sm text-green-600">
+                        Confirmado em:{" "}
+                        {format(
+                          parseISO(cliente.data_pagamento_confirmado),
+                          "dd/MM/yyyy HH:mm",
+                          { locale: ptBR }
+                        )}
+                      </span>
+                    </div>
+                  )}
+                  {/* Botão de confirmar pagamento */}
+                  {isEmAplicacao && !pagamentoConfirmado && (
+                    <Button
+                      onClick={handleConfirmPayment}
+                      disabled={isConfirmingPayment}
+                      className="w-full bg-green-600 hover:bg-green-700"
+                    >
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                      {isConfirmingPayment ? "Confirmando..." : "Confirmar Pagamento e Mover para Ganho"}
+                    </Button>
+                  )}
+                </div>
+              )}
 
               {/* Responsáveis */}
               <div className="space-y-3 mt-6">

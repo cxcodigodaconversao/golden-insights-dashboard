@@ -1,7 +1,8 @@
 import { useMemo } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { Users, Headphones, Shield, Building2, Globe } from "lucide-react";
+import { Users, Headphones, Shield, Building2, Globe, CreditCard } from "lucide-react";
+import { TIPOS_NEGOCIACAO } from "@/hooks/usePipeline";
 
 interface Time {
   id: string;
@@ -47,15 +48,18 @@ interface AdvancedFiltersProps {
   selectedSdr: string | null;
   selectedCliente?: string | null;
   selectedOrigem?: string | null;
+  selectedTipoNegociacao?: string | null;
   onTeamChange: (teamId: string | null) => void;
   onCloserChange: (closerId: string | null) => void;
   onSdrChange: (sdrId: string | null) => void;
   onClienteChange?: (clienteId: string | null) => void;
   onOrigemChange?: (origemId: string | null) => void;
+  onTipoNegociacaoChange?: (tipo: string | null) => void;
   showCloserFilter?: boolean;
   showSdrFilter?: boolean;
   showClienteFilter?: boolean;
   showOrigemFilter?: boolean;
+  showTipoNegociacaoFilter?: boolean;
 }
 
 export function AdvancedFilters({
@@ -69,15 +73,18 @@ export function AdvancedFilters({
   selectedSdr,
   selectedCliente,
   selectedOrigem,
+  selectedTipoNegociacao,
   onTeamChange,
   onCloserChange,
   onSdrChange,
   onClienteChange,
   onOrigemChange,
+  onTipoNegociacaoChange,
   showCloserFilter = true,
   showSdrFilter = true,
   showClienteFilter = true,
   showOrigemFilter = true,
+  showTipoNegociacaoFilter = false,
 }: AdvancedFiltersProps) {
   // Filter closers and SDRs by selected team
   const filteredClosers = useMemo(() => {
@@ -112,6 +119,10 @@ export function AdvancedFilters({
 
   const handleOrigemChange = (value: string) => {
     onOrigemChange?.(value === "all" ? null : value);
+  };
+
+  const handleTipoNegociacaoChange = (value: string) => {
+    onTipoNegociacaoChange?.(value === "all" ? null : value);
   };
 
   return (
@@ -228,6 +239,29 @@ export function AdvancedFilters({
               {origens.filter(o => o.ativo).map(origem => (
                 <SelectItem key={origem.id} value={origem.id}>
                   {origem.nome}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
+      {/* Tipo de Negociação Filter */}
+      {showTipoNegociacaoFilter && (
+        <div className="space-y-1">
+          <Label className="text-xs text-muted-foreground flex items-center gap-1">
+            <CreditCard className="h-3 w-3" />
+            Tipo Negociação
+          </Label>
+          <Select value={selectedTipoNegociacao || "all"} onValueChange={handleTipoNegociacaoChange}>
+            <SelectTrigger className="w-[140px] h-8 text-xs">
+              <SelectValue placeholder="Todos" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos Tipos</SelectItem>
+              {TIPOS_NEGOCIACAO.map(tipo => (
+                <SelectItem key={tipo.id} value={tipo.id}>
+                  {tipo.nome}
                 </SelectItem>
               ))}
             </SelectContent>
