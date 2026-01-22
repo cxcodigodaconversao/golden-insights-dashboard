@@ -58,7 +58,7 @@ const formSchema = z.object({
   sdr_nome: z.string().optional(),
   closer_id: z.string().min(1, "Closer é obrigatório"),
   closer_nome: z.string().optional(),
-  origem_id: z.string().min(1, "Origem é obrigatória"),
+  origem_id: z.string().optional(),
   origem_nome: z.string().optional(),
   status: z.string().default("Em negociação"),
   
@@ -647,33 +647,6 @@ export function CadastroClienteForm({ onSuccess }: CadastroClienteFormProps) {
                       )}
                     />
 
-                    <FormField
-                      control={form.control}
-                      name="origem_id"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Origem <span className="text-destructive">*</span></FormLabel>
-                          <Select
-                            onValueChange={field.onChange}
-                            value={field.value}
-                          >
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Selecione a origem" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {origens.map((origem) => (
-                                <SelectItem key={origem.id} value={origem.id}>
-                                  {origem.nome}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
 
                     <FormField
                       control={form.control}
