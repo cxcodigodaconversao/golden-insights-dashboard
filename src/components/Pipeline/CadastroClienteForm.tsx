@@ -26,9 +26,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { UserPlus, ChevronDown, ChevronUp, Loader2, CalendarIcon, AlertCircle, CheckCircle2, Calendar as CalendarCheck } from "lucide-react";
+import { UserPlus, ChevronDown, ChevronUp, Loader2, CalendarIcon, AlertCircle, CheckCircle2, Calendar as CalendarCheck, CreditCard, DollarSign } from "lucide-react";
 import {
   useCreateClientePipeline,
+  TIPOS_NEGOCIACAO,
 } from "@/hooks/usePipeline";
 import { useStatusAtendimento } from "@/hooks/useStatusAtendimento";
 import { useClosers, useSdrs, useOrigens, useTimes } from "@/hooks/useAtendimentos";
@@ -68,6 +69,12 @@ const formSchema = z.object({
   valor_potencial: z.coerce.number().optional(),
   proximo_passo: z.string().optional(),
   data_proximo_contato: z.string().optional(),
+  
+  // Dados de Pagamento/Fechamento
+  tipo_negociacao: z.string().optional(),
+  valor_venda: z.coerce.number().optional(),
+  valor_pendente: z.coerce.number().optional(),
+  forma_pagamento: z.string().optional(),
   
   // Informações Adicionais
   info_sdr: z.string().optional(),
@@ -260,6 +267,10 @@ export function CadastroClienteForm({ onSuccess }: CadastroClienteFormProps) {
         valor_potencial: data.valor_potencial || undefined,
         proximo_passo: data.proximo_passo || undefined,
         data_proximo_contato: data.data_proximo_contato || undefined,
+        tipo_negociacao: data.tipo_negociacao || undefined,
+        valor_venda: data.valor_venda || undefined,
+        valor_pendente: data.valor_pendente || undefined,
+        forma_pagamento: data.forma_pagamento || undefined,
         info_sdr: data.info_sdr || undefined,
         gravacao: data.gravacao || undefined,
         observacoes: data.observacoes || undefined,
@@ -743,6 +754,108 @@ export function CadastroClienteForm({ onSuccess }: CadastroClienteFormProps) {
                           <FormLabel>Data do Próximo Contato</FormLabel>
                           <FormControl>
                             <Input type="date" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </div>
+
+                {/* Dados de Pagamento/Fechamento */}
+                <div className="space-y-4">
+                  <h4 className="font-semibold text-sm text-muted-foreground border-b pb-2 flex items-center gap-2">
+                    <CreditCard className="h-4 w-4" />
+                    Dados de Pagamento (opcional)
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="tipo_negociacao"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Tipo de Negociação</FormLabel>
+                          <Select
+                            onValueChange={field.onChange}
+                            value={field.value || ""}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Selecione..." />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {TIPOS_NEGOCIACAO.map((tipo) => (
+                                <SelectItem key={tipo.id} value={tipo.id}>
+                                  {tipo.nome}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="valor_venda"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Valor da Venda (R$)</FormLabel>
+                          <FormControl>
+                            <div className="relative">
+                              <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                              <Input
+                                type="number"
+                                placeholder="0,00"
+                                className="pl-10"
+                                min="0"
+                                step="0.01"
+                                {...field}
+                              />
+                            </div>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="valor_pendente"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Valor Pendente (R$)</FormLabel>
+                          <FormControl>
+                            <div className="relative">
+                              <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                              <Input
+                                type="number"
+                                placeholder="0,00"
+                                className="pl-10"
+                                min="0"
+                                step="0.01"
+                                {...field}
+                              />
+                            </div>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="forma_pagamento"
+                      render={({ field }) => (
+                        <FormItem className="md:col-span-2 lg:col-span-1">
+                          <FormLabel>Forma de Pagamento</FormLabel>
+                          <FormControl>
+                            <Input
+                              placeholder="Ex: 3x no cartão"
+                              {...field}
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>

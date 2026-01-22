@@ -11,6 +11,13 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Phone,
   Mail,
   Building2,
@@ -365,9 +372,9 @@ export function ClienteDetailModal({
                 )}
               </div>
 
-              {/* Dados de Pagamento - visível quando há dados de fechamento */}
-              {(cliente.valor_venda || cliente.tipo_negociacao || isEmAplicacao) && (
-                <div className="space-y-3 mt-6">
+              {/* Dados de Pagamento - sempre visível para edição */}
+              <div className="space-y-3 mt-6">
+                <div className="flex items-center justify-between">
                   <h4 className="font-semibold text-sm text-muted-foreground flex items-center gap-2">
                     <CreditCard className="h-4 w-4" />
                     Pagamento
@@ -378,75 +385,186 @@ export function ClienteDetailModal({
                       </Badge>
                     )}
                   </h4>
-                  <div className="grid grid-cols-2 gap-3">
-                    {cliente.valor_venda && cliente.valor_venda > 0 && (
-                      <div className="flex items-center gap-2 p-2 rounded-lg bg-green-500/10 border border-green-500/20">
-                        <DollarSign className="h-4 w-4 text-green-500" />
-                        <div>
-                          <p className="text-xs text-muted-foreground">Valor da Venda</p>
-                          <span className="text-sm font-semibold text-green-600">
-                            {formatCurrency(cliente.valor_venda)}
-                          </span>
-                        </div>
-                      </div>
-                    )}
-                    {cliente.valor_pendente !== null && cliente.valor_pendente > 0 && (
-                      <div className="flex items-center gap-2 p-2 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
-                        <Clock className="h-4 w-4 text-yellow-500" />
-                        <div>
-                          <p className="text-xs text-muted-foreground">Valor Pendente</p>
-                          <span className="text-sm font-semibold text-yellow-600">
-                            {formatCurrency(cliente.valor_pendente)}
-                          </span>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                  {tipoNegociacao && (
-                    <div className="flex items-center gap-2 p-2 rounded-lg bg-primary/10 border border-primary/20">
-                      <Receipt className="h-4 w-4 text-primary" />
-                      <div>
-                        <p className="text-xs text-muted-foreground">Tipo de Negociação</p>
-                        <span className="text-sm font-medium text-primary">
-                          {tipoNegociacao.nome}
-                        </span>
-                      </div>
-                    </div>
-                  )}
-                  {cliente.forma_pagamento && (
-                    <div className="p-2 rounded-lg bg-secondary/50">
-                      <p className="text-xs text-muted-foreground mb-1">
-                        Forma de Pagamento Negociada:
-                      </p>
-                      <p className="text-sm">{cliente.forma_pagamento}</p>
-                    </div>
-                  )}
-                  {cliente.data_pagamento_confirmado && (
-                    <div className="flex items-center gap-2 p-2 rounded-lg bg-green-500/10">
-                      <Calendar className="h-4 w-4 text-green-500" />
-                      <span className="text-sm text-green-600">
-                        Confirmado em:{" "}
-                        {format(
-                          parseISO(cliente.data_pagamento_confirmado),
-                          "dd/MM/yyyy HH:mm",
-                          { locale: ptBR }
-                        )}
-                      </span>
-                    </div>
-                  )}
-                  {/* Botão de confirmar pagamento */}
-                  {isEmAplicacao && !pagamentoConfirmado && (
+                  {!isEditing && (
                     <Button
-                      onClick={handleConfirmPayment}
-                      disabled={isConfirmingPayment}
-                      className="w-full bg-green-600 hover:bg-green-700"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setEditData({
+                          tipo_negociacao: cliente.tipo_negociacao || "",
+                          valor_venda: cliente.valor_venda || 0,
+                          valor_pendente: cliente.valor_pendente || 0,
+                          forma_pagamento: cliente.forma_pagamento || "",
+                        });
+                        setIsEditing(true);
+                      }}
                     >
-                      <CheckCircle className="h-4 w-4 mr-2" />
-                      {isConfirmingPayment ? "Confirmando..." : "Confirmar Pagamento e Mover para Ganho"}
+                      <Edit2 className="h-4 w-4 mr-1" />
+                      Editar
                     </Button>
                   )}
                 </div>
-              )}
+
+                {isEditing ? (
+                  <div className="space-y-3 p-3 border rounded-lg bg-secondary/30">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <label className="text-xs text-muted-foreground">Tipo de Negociação</label>
+                        <Select
+                          value={editData.tipo_negociacao as string || ""}
+                          onValueChange={(value) => setEditData(prev => ({ ...prev, tipo_negociacao: value }))}
+                        >
+                          <SelectTrigger className="h-9">
+                            <SelectValue placeholder="Selecione..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {TIPOS_NEGOCIACAO.map((tipo) => (
+                              <SelectItem key={tipo.id} value={tipo.id}>
+                                {tipo.nome}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-xs text-muted-foreground">Valor da Venda (R$)</label>
+                        <Input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={editData.valor_venda || ""}
+                          onChange={(e) => setEditData(prev => ({ ...prev, valor_venda: parseFloat(e.target.value) || 0 }))}
+                          className="h-9"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-xs text-muted-foreground">Valor Pendente (R$)</label>
+                        <Input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={editData.valor_pendente || ""}
+                          onChange={(e) => setEditData(prev => ({ ...prev, valor_pendente: parseFloat(e.target.value) || 0 }))}
+                          className="h-9"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-xs text-muted-foreground">Forma de Pagamento</label>
+                        <Input
+                          value={editData.forma_pagamento as string || ""}
+                          onChange={(e) => setEditData(prev => ({ ...prev, forma_pagamento: e.target.value }))}
+                          placeholder="Ex: 3x no cartão"
+                          className="h-9"
+                        />
+                      </div>
+                    </div>
+                    <div className="flex justify-end gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setIsEditing(false);
+                          setEditData({});
+                        }}
+                      >
+                        Cancelar
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={handleSaveEdit}
+                        disabled={updateCliente.isPending}
+                      >
+                        {updateCliente.isPending ? "Salvando..." : "Salvar"}
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-2 gap-3">
+                      {cliente.valor_venda && cliente.valor_venda > 0 ? (
+                        <div className="flex items-center gap-2 p-2 rounded-lg bg-green-500/10 border border-green-500/20">
+                          <DollarSign className="h-4 w-4 text-green-500" />
+                          <div>
+                            <p className="text-xs text-muted-foreground">Valor da Venda</p>
+                            <span className="text-sm font-semibold text-green-600">
+                              {formatCurrency(cliente.valor_venda)}
+                            </span>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2 p-2 rounded-lg bg-secondary/50 border border-dashed">
+                          <DollarSign className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-sm text-muted-foreground">Sem valor definido</span>
+                        </div>
+                      )}
+                      {cliente.valor_pendente !== null && cliente.valor_pendente > 0 ? (
+                        <div className="flex items-center gap-2 p-2 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
+                          <Clock className="h-4 w-4 text-yellow-500" />
+                          <div>
+                            <p className="text-xs text-muted-foreground">Valor Pendente</p>
+                            <span className="text-sm font-semibold text-yellow-600">
+                              {formatCurrency(cliente.valor_pendente)}
+                            </span>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2 p-2 rounded-lg bg-secondary/50 border border-dashed">
+                          <Clock className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-sm text-muted-foreground">Sem pendência</span>
+                        </div>
+                      )}
+                    </div>
+                    {tipoNegociacao ? (
+                      <div className="flex items-center gap-2 p-2 rounded-lg bg-primary/10 border border-primary/20">
+                        <Receipt className="h-4 w-4 text-primary" />
+                        <div>
+                          <p className="text-xs text-muted-foreground">Tipo de Negociação</p>
+                          <span className="text-sm font-medium text-primary">
+                            {tipoNegociacao.nome}
+                          </span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2 p-2 rounded-lg bg-secondary/50 border border-dashed">
+                        <Receipt className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm text-muted-foreground">Tipo de negociação não definido</span>
+                      </div>
+                    )}
+                    {cliente.forma_pagamento && (
+                      <div className="p-2 rounded-lg bg-secondary/50">
+                        <p className="text-xs text-muted-foreground mb-1">
+                          Forma de Pagamento Negociada:
+                        </p>
+                        <p className="text-sm">{cliente.forma_pagamento}</p>
+                      </div>
+                    )}
+                    {cliente.data_pagamento_confirmado && (
+                      <div className="flex items-center gap-2 p-2 rounded-lg bg-green-500/10">
+                        <Calendar className="h-4 w-4 text-green-500" />
+                        <span className="text-sm text-green-600">
+                          Confirmado em:{" "}
+                          {format(
+                            parseISO(cliente.data_pagamento_confirmado),
+                            "dd/MM/yyyy HH:mm",
+                            { locale: ptBR }
+                          )}
+                        </span>
+                      </div>
+                    )}
+                    {/* Botão de confirmar pagamento */}
+                    {isEmAplicacao && !pagamentoConfirmado && (
+                      <Button
+                        onClick={handleConfirmPayment}
+                        disabled={isConfirmingPayment}
+                        className="w-full bg-green-600 hover:bg-green-700"
+                      >
+                        <CheckCircle className="h-4 w-4 mr-2" />
+                        {isConfirmingPayment ? "Confirmando..." : "Confirmar Pagamento e Mover para Ganho"}
+                      </Button>
+                    )}
+                  </>
+                )}
+              </div>
 
               {/* Responsáveis */}
               <div className="space-y-3 mt-6">

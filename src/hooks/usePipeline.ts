@@ -84,6 +84,11 @@ export interface CreateClientePipelineData {
   status?: string;
   info_sdr?: string;
   gravacao?: string;
+  // Campos de fechamento de venda
+  tipo_negociacao?: string;
+  valor_venda?: number;
+  valor_pendente?: number;
+  forma_pagamento?: string;
 }
 
 export const ETAPAS_PIPELINE = [
